@@ -1,0 +1,167 @@
+/**
+ * FixFlow Design System Tokens
+ * Professional, high-contrast, accessible maintenance SaaS tokens.
+ */
+:root {
+  /* Surfaces & Backgrounds */
+  --color-bg: #f8fafc;
+  --color-surface: #ffffff;
+  --color-surface-subtle: #f1f5f9;
+  --color-surface-hover: #f8fafc;
+  --color-surface-active: #e2e8f0;
+
+  /* Borders & Dividers */
+  --color-border: #e2e8f0;
+  --color-border-strong: #cbd5e1;
+  --color-border-subtle: #f1f5f9;
+
+  /* Text & Typography */
+  --color-text: #0f172a;
+  --color-text-muted: #475569;
+  --color-text-subtle: #64748b;
+  --color-text-inverse: #ffffff;
+
+  /* Primary Accent (Restrained, authoritative SaaS blue) */
+  --color-primary: #2563eb;
+  --color-primary-hover: #1d4ed8;
+  --color-primary-active: #1e40af;
+  --color-primary-subtle: #eff6ff;
+  --color-primary-border: #bfdbfe;
+
+  /* Danger / Destructive */
+  --color-danger: #dc2626;
+  --color-danger-hover: #b91c1c;
+  --color-danger-subtle: #fef2f2;
+  --color-danger-border: #fecaca;
+  --color-danger-text: #991b1b;
+
+  /* Success */
+  --color-success: #16a34a;
+  --color-success-subtle: #f0fdf4;
+  --color-success-border: #bbf7d0;
+  --color-success-text: #166534;
+
+  /* Warning */
+  --color-warning: #d97706;
+  --color-warning-subtle: #fffbeb;
+  --color-warning-border: #fde68a;
+  --color-warning-text: #92400e;
+
+  /* Status Colors */
+  --status-submitted-bg: #f1f5f9;
+  --status-submitted-text: #334155;
+  --status-submitted-border: #cbd5e1;
+
+  --status-assigned-bg: #eff6ff;
+  --status-assigned-text: #1d4ed8;
+  --status-assigned-border: #bfdbfe;
+
+  --status-in_progress-bg: #fef3c7;
+  --status-in_progress-text: #92400e;
+  --status-in_progress-border: #fde68a;
+
+  --status-on_hold-bg: #fff7ed;
+  --status-on_hold-text: #9a3412;
+  --status-on_hold-border: #fed7aa;
+
+  --status-resolved-bg: #ecfdf5;
+  --status-resolved-text: #065f46;
+  --status-resolved-border: #a7f3d0;
+
+  --status-closed-bg: #f8fafc;
+  --status-closed-text: #475569;
+  --status-closed-border: #e2e8f0;
+
+  --status-rejected-bg: #fef2f2;
+  --status-rejected-text: #991b1b;
+  --status-rejected-border: #fecaca;
+
+  /* Priority Colors */
+  --priority-low-bg: #f1f5f9;
+  --priority-low-text: #334155;
+
+  --priority-medium-bg: #eff6ff;
+  --priority-medium-text: #1d4ed8;
+
+  --priority-high-bg: #fff7ed;
+  --priority-high-text: #c2410c;
+
+  --priority-urgent-bg: #fef2f2;
+  --priority-urgent-text: #b91c1c;
+
+  /* Spacing Scale (4px baseline) */
+  --spacing-0: 0px;
+  --spacing-1: 4px;
+  --spacing-2: 8px;
+  --spacing-3: 12px;
+  --spacing-4: 16px;
+  --spacing-5: 20px;
+  --spacing-6: 24px;
+  --spacing-8: 32px;
+  --spacing-10: 40px;
+  --spacing-12: 48px;
+  --spacing-16: 64px;
+
+  /* Typography */
+  --font-family-base: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-family-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+
+  --font-size-xs: 0.75rem;    /* 12px */
+  --font-size-sm: 0.875rem;   /* 14px */
+  --font-size-base: 1rem;     /* 16px */
+  --font-size-lg: 1.125rem;   /* 18px */
+  --font-size-xl: 1.25rem;    /* 20px */
+  --font-size-2xl: 1.5rem;    /* 24px */
+  --font-size-3xl: 1.875rem;  /* 30px */
+
+  --font-weight-regular: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+
+  --line-height-none: 1;
+  --line-height-tight: 1.25;
+  --line-height-normal: 1.5;
+  --line-height-relaxed: 1.625;
+
+  /* Border Radii */
+  --radius-xs: 2px;
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --radius-xl: 12px;
+  --radius-full: 9999px;
+
+  /* Shadows */
+  --shadow-xs: 0 1px 2px 0 rgba(15, 23, 42, 0.05);
+  --shadow-sm: 0 1px 3px 0 rgba(15, 23, 42, 0.08), 0 1px 2px -1px rgba(15, 23, 42, 0.08);
+  --shadow-md: 0 4px 6px -1px rgba(15, 23, 42, 0.08), 0 2px 4px -2px rgba(15, 23, 42, 0.06);
+  --shadow-lg: 0 10px 15px -3px rgba(15, 23, 42, 0.08), 0 4px 6px -4px rgba(15, 23, 42, 0.04);
+  --shadow-modal: 0 20px 25px -5px rgba(15, 23, 42, 0.15), 0 8px 10px -6px rgba(15, 23, 42, 0.1);
+
+  /* Accessible Focus States */
+  --focus-ring-offset: 2px;
+  --focus-ring-color: var(--color-primary);
+  --focus-ring: 0 0 0 var(--focus-ring-offset) var(--color-surface), 0 0 0 calc(var(--focus-ring-offset) + 2px) var(--focus-ring-color);
+
+  /* Layout Dimensions */
+  --sidebar-width: 256px;
+  --header-height: 60px;
+  --content-max-width: 1240px;
+  --z-header: 100;
+  --z-sidebar: 110;
+  --z-modal-backdrop: 200;
+  --z-modal: 210;
+}
+
+/* Reduced Motion Override */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

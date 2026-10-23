@@ -1,0 +1,43 @@
+.form-field__textarea {
+  width: 100%;
+  padding: var(--spacing-2) var(--spacing-3);
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-normal);
+  color: var(--color-text);
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  resize: vertical;
+  min-height: 80px;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.form-field__textarea::placeholder {
+  color: var(--color-text-subtle);
+}
+
+.form-field__textarea:hover:not(:disabled) {
+  border-color: var(--color-border-strong);
+}
+
+.form-field__textarea:focus {
+  border-color: var(--color-primary);
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+.form-field__textarea:disabled {
+  background-color: var(--color-surface-subtle);
+  color: var(--color-text-subtle);
+  cursor: not-allowed;
+  opacity: 0.8;
+}
+
+.form-field--error .form-field__textarea {
+  border-color: var(--color-danger);
+}
+
+.form-field--error .form-field__textarea:focus {
+  border-color: var(--color-danger);
+  box-shadow: 0 0 0 2px var(--color-surface), 0 0 0 4px var(--color-danger);
+}
