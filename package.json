@@ -3,8 +3,11 @@
   "version": "1.0.0",
   "private": true,
   "type": "module",
+  "workspaces": [
+    "client"
+  ],
   "scripts": {
-    "build": "npm --prefix client run build",
+    "build": "npm --prefix client install && npm --prefix client run build",
     "test": "npm --prefix server test && npm --prefix client test",
     "start": "node server/src/server.js"
   }
