@@ -1,0 +1,42 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "chrome",
+            "request": "launch",
+            "name": "Launch Chrome against localhost",
+            "url": "http://localhost:5173",
+            "webRoot": "${workspaceFolder}/client"
+        },
+        {
+            "type": "chrome",
+            "request": "launch",
+            "name": "Launch Chrome (auto-start Vite)",
+            "url": "http://localhost:5173",
+            "webRoot": "${workspaceFolder}/client",
+            "preLaunchTask": "Start Client (Vite)"
+        },
+        {
+            "type": "node",
+            "request": "launch",
+            "name": "Launch Backend Server",
+            "skipFiles": [
+                "<node_internals>/**"
+            ],
+            "program": "${workspaceFolder}/server/src/server.js",
+            "cwd": "${workspaceFolder}/server"
+        }
+    ],
+    "compounds": [
+        {
+            "name": "Full Stack (Server + Client Chrome)",
+            "configurations": [
+                "Launch Backend Server",
+                "Launch Chrome against localhost"
+            ]
+        }
+    ]
+}

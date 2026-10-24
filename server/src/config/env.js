@@ -54,7 +54,16 @@ export const env = Object.freeze({
   MONGODB_URI: resolveMongoUri(process.env.MONGODB_URI, process.env.NODE_ENV || 'development'),
   CLIENT_URL: process.env.CLIENT_URL || 'http://localhost:5173',
   JWT_SECRET: validateJwtSecret(process.env.JWT_SECRET, process.env.NODE_ENV || 'development'),
-  JWT_EXPIRES_IN: validateJwtExpiresIn(process.env.JWT_EXPIRES_IN)
+  JWT_EXPIRES_IN: validateJwtExpiresIn(process.env.JWT_EXPIRES_IN),
+  SMTP_HOST: process.env.SMTP_HOST || 'smtp.gmail.com',
+  SMTP_PORT: parseInt(process.env.SMTP_PORT || '465', 10),
+  SMTP_SECURE: process.env.SMTP_SECURE
+    ? process.env.SMTP_SECURE === 'true'
+    : parseInt(process.env.SMTP_PORT || '465', 10) === 465,
+  SMTP_USER: process.env.SMTP_USER || '',
+  SMTP_PASS: process.env.SMTP_PASS || '',
+  FROM_EMAIL: process.env.FROM_EMAIL || process.env.SMTP_USER || 'no-reply@fixflow.com',
+  FROM_NAME: process.env.FROM_NAME || 'FixFlow Facilities Care'
 });
 
 export default env;

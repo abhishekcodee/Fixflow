@@ -9,6 +9,7 @@ import { StatusBadge } from '../components/common/StatusBadge';
 import { LoadingState } from '../components/common/LoadingState';
 import { EmptyState } from '../components/common/EmptyState';
 import { ErrorState } from '../components/common/ErrorState';
+import { PlusIcon } from '../components/common/Icons';
 import './Complaints.css';
 
 export function ComplaintList() {
@@ -19,6 +20,8 @@ export function ComplaintList() {
     category: '',
     priority: '',
   });
+  const [searchQuery, setSearchQuery] = useState('');
+  const [sortBy, setSortBy] = useState('newest');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -55,9 +58,34 @@ export function ComplaintList() {
 
   const handleResetFilters = () => {
     setFilters({ status: '', category: '', priority: '' });
+    setSearchQuery('');
+    setSortBy('newest');
   };
 
-  const hasActiveFilters = Object.values(filters).some(Boolean);
+  // Client-side filtering and sorting for search queries
+  const processedComplaints = complaints
+    .filter((item) => {
+      if (!searchQuery.trim()) return true;
+      const q = searchQuery.toLowerCase();
+      const matchNum = item.complaintNumber?.toLowerCase().includes(q);
+      const matchTitle = item.title?.toLowerCase().includes(q);
+      const matchDesc = item.description?.toLowerCase().includes(q);
+      const matchLoc = `${item.location?.building} ${item.location?.room}`.toLowerCase().includes(q);
+      return matchNum || matchTitle || matchDesc || matchLoc;
+    })
+    .sort((a, b) => {
+      if (sortBy === 'oldest') {
+        return new Date(a.createdAt) - new Date(b.createdAt);
+      }
+      if (sortBy === 'priority') {
+        const priorityRank = { urgent: 4, high: 3, medium: 2, low: 1 };
+        return (priorityRank[b.priority] || 0) - (priorityRank[a.priority] || 0);
+      }
+      // default newest
+      return new Date(b.createdAt) - new Date(a.createdAt);
+    });
+
+  const hasActiveFilters = Object.values(filters).some(Boolean) || searchQuery.trim().length > 0;
 
   return (
     <div className="complaints-page">
@@ -66,8 +94,9 @@ export function ComplaintList() {
         description="Browse, filter, and track facility service requests."
         actions={
           <Link to="/complaints/new">
-            <Button variant="primary" size="md">
-              ➕ Report Incident
+            <Button variant="primary" size="md" className="btn-with-icon">
+              <PlusIcon size={16} />
+              <span>Report Incident</span>
             </Button>
           </Link>
         }
@@ -76,6 +105,22 @@ export function ComplaintList() {
       {/* Filter Toolbar */}
       <Card className="filter-card">
         <div className="filter-grid">
+          {/* Search Field */}
+          <div className="filter-search-field">
+            <label htmlFor="complaints-search" className="filter-field-label">
+              Search Tickets
+            </label>
+            <input
+              id="complaints-search"
+              name="search"
+              type="search"
+              placeholder="Filter by ticket #, keyword, location..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="filter-search-input"
+            />
+          </div>
+
           <Select
             id="filter-status"
             name="status"
@@ -131,6 +176,19 @@ export function ComplaintList() {
             ]}
           />
 
+          <Select
+            id="filter-sort"
+            name="sort"
+            label="Sort Order"
+            value={sortBy}
+            onChange={(e) => setSortBy(e.target.value)}
+            options={[
+              { value: 'newest', label: 'Newest First' },
+              { value: 'oldest', label: 'Oldest First' },
+              { value: 'priority', label: 'Highest Priority' },
+            ]}
+          />
+
           {hasActiveFilters && (
             <div className="filter-reset-wrapper">
               <Button variant="ghost" size="sm" onClick={handleResetFilters}>
@@ -169,7 +227,7 @@ export function ComplaintList() {
               ) : (
                 <Link to="/complaints/new">
                   <Button variant="primary" size="sm">
-                    Report Issue
+                    Report First Issue
                   </Button>
                 </Link>
               )
@@ -177,28 +235,53 @@ export function ComplaintList() {
           />
         )}
 
-        {!loading && !error && complaints.length > 0 && (
+        {!loading && !error && complaints.length > 0 && processedComplaints.length === 0 && (
+          <div className="complaints-no-search-match">
+            <p>No complaints match your search query &ldquo;{searchQuery}&rdquo;.</p>
+            <Button variant="ghost" size="sm" onClick={() => setSearchQuery('')}>
+              Clear Search Query
+            </Button>
+          </div>
+        )}
+
+        {!loading && !error && processedComplaints.length > 0 && (
           <>
             <div className="table-responsive">
               <table className="data-table">
                 <thead>
                   <tr>
                     <th>Ticket #</th>
-                    <th>Title</th>
+                    <th>Issue Details</th>
                     <th>Category</th>
                     <th>Priority</th>
                     <th>Status</th>
-                    <th>Assigned To</th>
-                    <th>Reported</th>
+                    <th>Location</th>
+                    <th>Assigned Tech</th>
+                    <th>Created</th>
                     <th>Action</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {complaints.map((item) => (
-                    <tr key={item._id}>
+                  {processedComplaints.map((item) => (
+                    <tr key={item._id || item.id}>
                       <td className="font-mono">{item.complaintNumber}</td>
-                      <td className="font-medium">{item.title}</td>
-                      <td className="capitalize">{item.category?.replace('_', ' ')}</td>
+                      <td>
+                        <div className="complaint-item-details">
+                          <span className="font-medium">{item.title}</span>
+                          {item.description && (
+                            <span className="complaint-item-desc text-muted text-xs">
+                              {item.description.length > 70
+                                ? `${item.description.slice(0, 70)}...`
+                                : item.description}
+                            </span>
+                          )}
+                        </div>
+                      </td>
+                      <td className="capitalize">
+                        <span className={`cat-pill cat-pill--${item.category}`}>
+                          {item.category?.replace('_', ' ')}
+                        </span>
+                      </td>
                       <td>
                         <StatusBadge priority={item.priority} variant="priority" />
                       </td>
@@ -206,13 +289,25 @@ export function ComplaintList() {
                         <StatusBadge status={item.status} />
                       </td>
                       <td className="text-muted text-xs">
-                        {item.assignedTo ? item.assignedTo.name : 'Unassigned'}
+                        {item.location?.building
+                          ? `${item.location.building}, ${item.location.room || item.location.roomOrUnit || ''}`
+                          : '—'}
                       </td>
-                      <td className="text-muted text-xs">
+                      <td className="text-xs">
+                        {item.assignedTo?.name ? (
+                          <span className="complaint-tech-assigned">
+                            <span aria-hidden="true">👤 </span>
+                            <span>{item.assignedTo.name}</span>
+                          </span>
+                        ) : (
+                          <span className="text-muted">Unassigned</span>
+                        )}
+                      </td>
+                      <td className="text-muted text-xs whitespace-nowrap">
                         {new Date(item.createdAt).toLocaleDateString()}
                       </td>
                       <td>
-                        <Link to={`/complaints/${item._id}`}>
+                        <Link to={`/complaints/${item._id || item.id}`}>
                           <Button variant="secondary" size="sm">
                             Inspect
                           </Button>
@@ -224,31 +319,32 @@ export function ComplaintList() {
               </table>
             </div>
 
-            {/* Pagination footer */}
-            <div className="pagination-bar">
-              <span className="pagination-summary">
-                Showing page <strong>{pagination.page}</strong> of <strong>{pagination.totalPages || 1}</strong> ({pagination.total} total)
-              </span>
-
-              <div className="pagination-buttons">
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  disabled={pagination.page <= 1}
-                  onClick={() => loadComplaints(pagination.page - 1)}
-                >
-                  ◀ Previous
-                </Button>
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  disabled={pagination.page >= pagination.totalPages}
-                  onClick={() => loadComplaints(pagination.page + 1)}
-                >
-                  Next ▶
-                </Button>
+            {/* Pagination Controls */}
+            {pagination.totalPages > 1 && (
+              <div className="pagination-bar">
+                <span className="pagination-info">
+                  Showing page {pagination.page} of {pagination.totalPages} ({pagination.total} total tickets)
+                </span>
+                <div className="pagination-buttons">
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    disabled={pagination.page <= 1}
+                    onClick={() => loadComplaints(pagination.page - 1)}
+                  >
+                    ← Previous
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    disabled={pagination.page >= pagination.totalPages}
+                    onClick={() => loadComplaints(pagination.page + 1)}
+                  >
+                    Next →
+                  </Button>
+                </div>
               </div>
-            </div>
+            )}
           </>
         )}
       </Card>

@@ -31,6 +31,37 @@ export const createComplaint = async (req, res, next) => {
 
     const { title, description, category, priority, location } = req.body;
 
+    // Resolve real geo-coordinates (use provided coordinates or realistic campus building coordinates)
+    let latitude = null;
+    let longitude = null;
+    if (typeof location.latitude === 'number' && !isNaN(location.latitude)) {
+      latitude = location.latitude;
+    } else if (location.latitude && !isNaN(parseFloat(location.latitude))) {
+      latitude = parseFloat(location.latitude);
+    }
+
+    if (typeof location.longitude === 'number' && !isNaN(location.longitude)) {
+      longitude = location.longitude;
+    } else if (location.longitude && !isNaN(parseFloat(location.longitude))) {
+      longitude = parseFloat(location.longitude);
+    }
+
+    // Default facility anchor (e.g. facility campus) if coordinates not passed
+    if (latitude === null || longitude === null) {
+      const baseLat = 28.6139;
+      const baseLng = 77.2090;
+      const seed = `${location.building || 'Campus'}-${location.room || location.roomOrUnit || '101'}`;
+      let hash = 0;
+      for (let i = 0; i < seed.length; i++) {
+        hash = (hash << 5) - hash + seed.charCodeAt(i);
+        hash |= 0;
+      }
+      const offsetLat = ((Math.abs(hash) % 80) - 40) * 0.00015;
+      const offsetLng = (((Math.abs(hash) >> 3) % 80) - 40) * 0.00015;
+      latitude = parseFloat((baseLat + offsetLat).toFixed(6));
+      longitude = parseFloat((baseLng + offsetLng).toFixed(6));
+    }
+
     const newComplaint = await Complaint.create({
       complaintNumber,
       title: title.trim(),
@@ -41,8 +72,11 @@ export const createComplaint = async (req, res, next) => {
       location: {
         building: location.building.trim(),
         floor: location.floor.trim(),
-        room: location.room.trim(),
-        description: location.description ? location.description.trim() : ''
+        room: (location.room || location.roomOrUnit).trim(),
+        description: (location.description || location.additionalNotes || '').trim(),
+        latitude,
+        longitude,
+        address: (location.address || '').trim()
       },
       createdBy: req.user.id,
       assignedTo: null

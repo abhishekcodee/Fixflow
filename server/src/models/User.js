@@ -41,6 +41,10 @@ const userSchema = new mongoose.Schema(
     isActive: {
       type: Boolean,
       default: true
+    },
+    isVerified: {
+      type: Boolean,
+      default: false
     }
   },
   {
@@ -89,6 +93,7 @@ userSchema.methods.toSafeObject = function () {
     email: this.email,
     role: this.role,
     isActive: this.isActive,
+    isVerified: this.isVerified,
     createdAt: this.createdAt,
     updatedAt: this.updatedAt
   };

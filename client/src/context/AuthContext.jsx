@@ -55,6 +55,15 @@ export function AuthProvider({ children }) {
     throw new Error('Authentication response was missing token or user data.');
   }, []);
 
+  const setSession = useCallback((newToken, newUser) => {
+    if (newToken && newUser) {
+      localStorage.setItem('fixflow_token', newToken);
+      setToken(newToken);
+      setUser(newUser);
+      setError(null);
+    }
+  }, []);
+
   const register = useCallback(async (name, email, password) => {
     setError(null);
     const data = await authApi.register({ name, email, password });
@@ -92,6 +101,7 @@ export function AuthProvider({ children }) {
     login,
     register,
     logout,
+    setSession,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

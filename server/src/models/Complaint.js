@@ -103,6 +103,20 @@ const complaintSchema = new mongoose.Schema(
         trim: true,
         default: '',
         maxlength: 200
+      },
+      latitude: {
+        type: Number,
+        default: null
+      },
+      longitude: {
+        type: Number,
+        default: null
+      },
+      address: {
+        type: String,
+        trim: true,
+        default: '',
+        maxlength: 250
       }
     },
     createdBy: {

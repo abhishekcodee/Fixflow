@@ -68,6 +68,21 @@ export async function request(endpoint, options = {}) {
     throw new ApiError(message, response.status, code, details);
   }
 
+  if (data?.data && typeof data.data === 'object' && !Array.isArray(data.data)) {
+    return {
+      ...data.data,
+      meta: data.meta || null,
+      pagination: data.meta
+        ? {
+            page: data.meta.page,
+            limit: data.meta.limit,
+            total: data.meta.totalCount,
+            totalPages: data.meta.totalPages,
+          }
+        : null,
+    };
+  }
+
   return data?.data ?? data;
 }
 
@@ -75,6 +90,10 @@ export async function request(endpoint, options = {}) {
 export const authApi = {
   login: (credentials) => request('/auth/login', { method: 'POST', body: credentials }),
   register: (payload) => request('/auth/register', { method: 'POST', body: payload }),
+  sendOtp: (payload) => request('/auth/send-otp', { method: 'POST', body: payload }),
+  verifyOtp: (payload) => request('/auth/verify-otp', { method: 'POST', body: payload }),
+  forgotPassword: (payload) => request('/auth/forgot-password', { method: 'POST', body: payload }),
+  resetPassword: (payload) => request('/auth/reset-password', { method: 'POST', body: payload }),
   getProfile: () => request('/auth/me', { method: 'GET' }),
   logout: () => request('/auth/logout', { method: 'POST' }),
   getTechnicians: () => request('/auth/technicians', { method: 'GET' }),

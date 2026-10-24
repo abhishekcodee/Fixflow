@@ -1,5 +1,6 @@
 /**
  * FixFlow Global Base Styles & CSS Reset
+ * Grounded in the Google Stitch Design System Specification
  */
 @import './design-tokens.css';
 
@@ -65,12 +66,14 @@ body {
 
 /* Typography elements */
 h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-family-headline);
   color: var(--color-text);
   font-weight: var(--font-weight-semibold);
   line-height: var(--line-height-tight);
+  letter-spacing: -0.02em;
 }
 
-h1 { font-size: var(--font-size-2xl); }
+h1 { font-size: var(--font-size-2xl); font-weight: var(--font-weight-bold); }
 h2 { font-size: var(--font-size-xl); }
 h3 { font-size: var(--font-size-lg); }
 h4 { font-size: var(--font-size-base); }
@@ -82,9 +85,11 @@ p {
 a {
   color: var(--color-primary);
   text-decoration: none;
+  transition: color 0.15s ease;
 }
 
 a:hover {
+  color: var(--color-primary-hover);
   text-decoration: underline;
 }
 
@@ -111,6 +116,7 @@ button:disabled {
 table {
   border-collapse: collapse;
   width: 100%;
+  font-variant-numeric: tabular-nums;
 }
 
 /* Code */
@@ -130,4 +136,38 @@ code, pre {
   clip: rect(0, 0, 0, 0);
   white-space: nowrap;
   border-width: 0;
+}
+
+/* Refined custom scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-border-strong);
+  border-radius: var(--radius-full);
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-text-subtle);
+}
+
+/* Mobile input zoom prevention & touch target optimizations */
+@media (max-width: 768px) {
+  input[type="text"],
+  input[type="email"],
+  input[type="password"],
+  input[type="number"],
+  textarea,
+  select {
+    font-size: 16px !important; /* Prevents auto-zoom on iOS mobile */
+  }
+
+  button,
+  .btn,
+  .sidebar__nav-link {
+    -webkit-tap-highlight-color: transparent;
+  }
 }

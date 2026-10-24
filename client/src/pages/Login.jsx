@@ -56,14 +56,20 @@ export function Login() {
     <div className="auth-container">
       <div className="auth-card-wrapper">
         <div className="auth-brand">
-          <div className="auth-brand__logo" aria-hidden="true">FF</div>
+          <div className="auth-brand__logo" aria-hidden="true">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" />
+            </svg>
+          </div>
           <h1 className="auth-brand__title">FixFlow</h1>
-          <p className="auth-brand__tagline">Smart Complaint & Maintenance Management</p>
+          <p className="auth-brand__tagline">Enterprise Facilities Care & Incident Management</p>
         </div>
 
         <Card className="auth-card">
-          <h2 className="auth-card__heading">Sign In</h2>
-          <p className="auth-card__subheading">Access your maintenance dashboard and work orders.</p>
+          <div className="auth-card__header">
+            <h2 className="auth-card__heading">Sign In</h2>
+            <p className="auth-card__subheading">Access your facilities dashboard and work orders.</p>
+          </div>
 
           {formError && (
             <div className="auth-card__alert">
@@ -95,8 +101,15 @@ export function Login() {
               onChange={(e) => setPassword(e.target.value)}
               error={fieldErrors.password}
               autoComplete="current-password"
+              showPasswordToggle={true}
               required
             />
+
+            <div className="auth-card__forgot-row">
+              <Link to="/forgot-password" className="auth-card__forgot-link">
+                Forgot password?
+              </Link>
+            </div>
 
             <Button
               type="submit"

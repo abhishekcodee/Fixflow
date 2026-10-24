@@ -47,3 +47,22 @@
   display: flex;
   justify-content: flex-start;
 }
+
+@media (max-width: 640px) {
+  .tech-metrics-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--spacing-3);
+  }
+
+  .tech-metric-card {
+    padding: var(--spacing-3) var(--spacing-4);
+  }
+
+  .tech-metric-card__value {
+    font-size: 1.65rem;
+  }
+
+  .tech-metric-card__label {
+    font-size: 10px;
+  }
+}

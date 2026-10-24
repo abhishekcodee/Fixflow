@@ -34,7 +34,7 @@ export const validatePasswordPolicy = (password) => {
  * @param {object} data
  * @returns {{ isValid: boolean, errors: Array<{ field: string, issue: string }> }}
  */
-export const validateRegistrationInput = ({ name, email, password }) => {
+export const validateRegistrationInput = ({ name, email, password, role }) => {
   const errors = [];
 
   // Name validation
@@ -83,8 +83,63 @@ export const validateLoginInput = ({ email, password }) => {
   };
 };
 
+export const validateOtpInput = ({ email, otp }) => {
+  const errors = [];
+
+  if (!email || typeof email !== 'string' || !EMAIL_REGEX.test(email.trim())) {
+    errors.push({ field: 'email', issue: 'Please provide a valid email address.' });
+  }
+
+  if (!otp || typeof otp !== 'string' || !/^\d{6}$/.test(otp.trim())) {
+    errors.push({ field: 'otp', issue: 'Verification code must be a 6-digit numeric code.' });
+  }
+
+  return {
+    isValid: errors.length === 0,
+    errors
+  };
+};
+
+export const validateForgotPasswordInput = ({ email }) => {
+  const errors = [];
+
+  if (!email || typeof email !== 'string' || !EMAIL_REGEX.test(email.trim())) {
+    errors.push({ field: 'email', issue: 'Please provide a valid email address.' });
+  }
+
+  return {
+    isValid: errors.length === 0,
+    errors
+  };
+};
+
+export const validateResetPasswordInput = ({ email, token, newPassword }) => {
+  const errors = [];
+
+  if (!email || typeof email !== 'string' || !EMAIL_REGEX.test(email.trim())) {
+    errors.push({ field: 'email', issue: 'Please provide a valid email address.' });
+  }
+
+  if (!token || typeof token !== 'string' || !/^\d{6}$/.test(token.trim())) {
+    errors.push({ field: 'token', issue: 'Password reset code must be a 6-digit numeric code.' });
+  }
+
+  const pwdValidation = validatePasswordPolicy(newPassword);
+  if (!pwdValidation.isValid) {
+    errors.push({ field: 'newPassword', issue: pwdValidation.error });
+  }
+
+  return {
+    isValid: errors.length === 0,
+    errors
+  };
+};
+
 export default {
   validatePasswordPolicy,
   validateRegistrationInput,
-  validateLoginInput
+  validateLoginInput,
+  validateOtpInput,
+  validateForgotPasswordInput,
+  validateResetPasswordInput
 };

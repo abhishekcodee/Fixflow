@@ -86,3 +86,19 @@
     display: none;
   }
 }
+
+@media (max-width: 480px) {
+  .app-header__right {
+    gap: var(--spacing-2);
+  }
+
+  .app-header__menu-btn {
+    width: 38px;
+    height: 38px;
+  }
+
+  .app-header__role-pill {
+    font-size: 9px;
+    padding: 1px 6px;
+  }
+}

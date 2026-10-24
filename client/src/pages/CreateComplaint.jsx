@@ -8,6 +8,7 @@ import { Input } from '../components/common/Input';
 import { Select } from '../components/common/Select';
 import { Textarea } from '../components/common/Textarea';
 import { ErrorState } from '../components/common/ErrorState';
+import { LocationPickerMap } from '../components/common/LocationPickerMap';
 import './CreateComplaint.css';
 
 export function CreateComplaint() {
@@ -21,6 +22,9 @@ export function CreateComplaint() {
     floor: '',
     roomOrUnit: '',
     additionalNotes: '',
+    latitude: null,
+    longitude: null,
+    address: '',
     description: '',
   });
 
@@ -87,6 +91,11 @@ export function CreateComplaint() {
           floor: formData.floor.trim(),
           roomOrUnit: formData.roomOrUnit.trim(),
           additionalNotes: formData.additionalNotes.trim() || undefined,
+          ...(formData.latitude !== null && formData.latitude !== undefined && {
+            latitude: formData.latitude,
+            longitude: formData.longitude,
+          }),
+          ...(formData.address ? { address: formData.address } : {}),
         },
         description: formData.description.trim(),
       };
@@ -219,6 +228,19 @@ export function CreateComplaint() {
               value={formData.additionalNotes}
               onChange={(e) => handleChange('additionalNotes', e.target.value)}
             />
+
+            <LocationPickerMap
+              latitude={formData.latitude}
+              longitude={formData.longitude}
+              onChange={(geo) => {
+                setFormData((prev) => ({
+                  ...prev,
+                  latitude: geo.latitude,
+                  longitude: geo.longitude,
+                  address: geo.address || prev.address,
+                }));
+              }}
+            />
           </div>
 
           <div className="form-section">
@@ -232,7 +254,7 @@ export function CreateComplaint() {
               value={formData.description}
               onChange={(e) => handleChange('description', e.target.value)}
               error={fieldErrors.description}
-              helperText="Minimum 10 characters."
+              helperText={`${formData.description.length}/2000 characters (minimum 10 required)`}
               required
             />
           </div>

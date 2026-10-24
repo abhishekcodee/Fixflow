@@ -13,6 +13,8 @@ import { Modal } from '../components/common/Modal';
 import { Input } from '../components/common/Input';
 import { Select } from '../components/common/Select';
 import { Textarea } from '../components/common/Textarea';
+import { RefreshIcon, ZapIcon } from '../components/common/Icons';
+import { ComplaintsMap } from '../components/common/ComplaintsMap';
 import './AdminDashboard.css';
 
 export function AdminDashboard() {
@@ -20,6 +22,7 @@ export function AdminDashboard() {
   const isAdmin = user?.role === 'admin';
 
   const [unassignedComplaints, setUnassignedComplaints] = useState([]);
+  const [allComplaints, setAllComplaints] = useState([]);
   const [technicians, setTechnicians] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -32,27 +35,48 @@ export function AdminDashboard() {
   const [assignError, setAssignError] = useState('');
   const [useManualId, setUseManualId] = useState(false);
 
-  async function loadTriageData() {
-    setLoading(true);
-    setError(null);
+  async function loadTriageData(isBackground = false) {
+    if (!isBackground) {
+      setLoading(true);
+      setError(null);
+    }
     try {
-      const [complaintsRes, techRes] = await Promise.all([
-        complaintsApi.list({ status: 'submitted', limit: 25 }),
+      const [complaintsRes, allRes, techRes] = await Promise.all([
+        complaintsApi.list({ status: 'submitted', limit: 50 }),
+        complaintsApi.list({ limit: 100 }).catch(() => null),
         authApi.getTechnicians().catch(() => ({ technicians: [] })),
       ]);
 
       setUnassignedComplaints(complaintsRes?.complaints || []);
+      setAllComplaints(allRes?.complaints || complaintsRes?.complaints || []);
       setTechnicians(techRes?.technicians || []);
     } catch (err) {
-      setError(err.message || 'Unable to retrieve unassigned complaints.');
+      if (!isBackground) {
+        setError(err.message || 'Unable to retrieve unassigned complaints.');
+      }
     } finally {
-      setLoading(false);
+      if (!isBackground) {
+        setLoading(false);
+      }
     }
   }
 
   useEffect(() => {
     if (isAdmin) {
       loadTriageData();
+
+      // Real-time auto-polling for incoming complaints
+      const intervalId = setInterval(() => {
+        loadTriageData(true);
+      }, 8000);
+
+      const handleFocus = () => loadTriageData(true);
+      window.addEventListener('focus', handleFocus);
+
+      return () => {
+        clearInterval(intervalId);
+        window.removeEventListener('focus', handleFocus);
+      };
     } else {
       setLoading(false);
     }
@@ -120,10 +144,19 @@ export function AdminDashboard() {
         title="Admin Dispatch Console"
         description="Review incoming incident submissions and dispatch work orders to maintenance technicians."
         actions={
-          <Button variant="secondary" size="sm" onClick={loadTriageData}>
-            ↻ Refresh Queue
+          <Button variant="secondary" size="sm" onClick={() => loadTriageData(false)} className="btn-with-icon">
+            <RefreshIcon size={14} />
+            <span>Refresh Queue</span>
           </Button>
         }
+      />
+
+      {/* Real-time Admin Dispatch & Incident Map */}
+      <ComplaintsMap
+        complaints={allComplaints}
+        title="Admin Facility Dispatch & Incident Map"
+        subtitle="Geospatial overview of active incidents across campus — dispatch technicians and monitor SLA responses"
+        onRefresh={() => loadTriageData(false)}
       />
 
       <Card
@@ -183,8 +216,10 @@ export function AdminDashboard() {
                         variant="primary"
                         size="sm"
                         onClick={() => openAssignModal(item)}
+                        className="btn-with-icon"
                       >
-                        ⚡ Dispatch
+                        <ZapIcon size={14} />
+                        <span>Dispatch</span>
                       </Button>
                     </td>
                   </tr>

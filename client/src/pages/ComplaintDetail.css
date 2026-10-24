@@ -360,3 +360,24 @@
   font-style: italic;
 }
 
+@media (max-width: 640px) {
+  .detail-metadata-grid {
+    grid-template-columns: 1fr;
+    gap: var(--spacing-3);
+  }
+
+  .workflow-actions-wrapper button,
+  .workflow-actions-wrapper a {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .detail-header-badges {
+    flex-wrap: wrap;
+  }
+
+  .feedback-stars {
+    justify-content: flex-start;
+  }
+}
+

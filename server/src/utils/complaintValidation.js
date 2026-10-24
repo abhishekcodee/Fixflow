@@ -67,7 +67,8 @@ export const validateCreateComplaint = (payload = {}) => {
     if (!location.floor || typeof location.floor !== 'string' || !location.floor.trim()) {
       errors.push({ field: 'location.floor', issue: 'Floor designation is required.' });
     }
-    if (!location.room || typeof location.room !== 'string' || !location.room.trim()) {
+    const roomVal = location.room || location.roomOrUnit;
+    if (!roomVal || typeof roomVal !== 'string' || !roomVal.trim()) {
       errors.push({ field: 'location.room', issue: 'Room or unit designation is required.' });
     }
   }

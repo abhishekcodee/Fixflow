@@ -1,6 +1,6 @@
 /**
- * FixFlow Design System Tokens
- * Professional, high-contrast, accessible maintenance SaaS tokens.
+ * FixFlow Design System Tokens — Built with Google Stitch
+ * High-efficiency operational SaaS environment for facility managers, technicians, and residents.
  */
 :root {
   /* Surfaces & Backgrounds */
@@ -21,27 +21,33 @@
   --color-text-subtle: #64748b;
   --color-text-inverse: #ffffff;
 
-  /* Primary Accent (Restrained, authoritative SaaS blue) */
-  --color-primary: #2563eb;
+  /* Primary Brand (Deep Navy Blue - Stitch Spec) */
+  --color-primary: #1e40af;
   --color-primary-hover: #1d4ed8;
-  --color-primary-active: #1e40af;
+  --color-primary-active: #1e3a8a;
   --color-primary-subtle: #eff6ff;
   --color-primary-border: #bfdbfe;
 
-  /* Danger / Destructive */
+  /* Secondary / Dynamic Accent (Sky Blue - Stitch Spec) */
+  --color-secondary: #0ea5e9;
+  --color-secondary-hover: #0284c7;
+  --color-secondary-subtle: #f0f9ff;
+  --color-secondary-border: #bae6fd;
+
+  /* Danger / Emergency Critical */
   --color-danger: #dc2626;
   --color-danger-hover: #b91c1c;
   --color-danger-subtle: #fef2f2;
   --color-danger-border: #fecaca;
   --color-danger-text: #991b1b;
 
-  /* Success */
-  --color-success: #16a34a;
-  --color-success-subtle: #f0fdf4;
-  --color-success-border: #bbf7d0;
-  --color-success-text: #166534;
+  /* Success / Operational Verified */
+  --color-success: #059669;
+  --color-success-subtle: #ecfdf5;
+  --color-success-border: #a7f3d0;
+  --color-success-text: #065f46;
 
-  /* Warning */
+  /* Warning / Pending Triage */
   --color-warning: #d97706;
   --color-warning-subtle: #fffbeb;
   --color-warning-border: #fde68a;
@@ -49,7 +55,7 @@
 
   /* Status Colors */
   --status-submitted-bg: #f1f5f9;
-  --status-submitted-text: #334155;
+  --status-submitted-text: #475569;
   --status-submitted-border: #cbd5e1;
 
   --status-assigned-bg: #eff6ff;
@@ -78,7 +84,7 @@
 
   /* Priority Colors */
   --priority-low-bg: #f1f5f9;
-  --priority-low-text: #334155;
+  --priority-low-text: #475569;
 
   --priority-medium-bg: #eff6ff;
   --priority-medium-text: #1d4ed8;
@@ -88,6 +94,20 @@
 
   --priority-urgent-bg: #fef2f2;
   --priority-urgent-text: #b91c1c;
+
+  /* Category Badges */
+  --cat-electrical-bg: #fef9c3;
+  --cat-electrical-text: #854d0e;
+  --cat-plumbing-bg: #e0f2fe;
+  --cat-plumbing-text: #0369a1;
+  --cat-hvac-bg: #e0e7ff;
+  --cat-hvac-text: #3730a3;
+  --cat-carpentry-bg: #f5f5f4;
+  --cat-carpentry-text: #44403c;
+  --cat-appliance-bg: #ede9fe;
+  --cat-appliance-text: #5b21b6;
+  --cat-safety-bg: #fee2e2;
+  --cat-safety-text: #991b1b;
 
   /* Spacing Scale (4px baseline) */
   --spacing-0: 0px;
@@ -103,8 +123,9 @@
   --spacing-16: 64px;
 
   /* Typography */
-  --font-family-base: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-  --font-family-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  --font-family-headline: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-family-base: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-family-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 
   --font-size-xs: 0.75rem;    /* 12px */
   --font-size-sm: 0.875rem;   /* 14px */
@@ -124,7 +145,7 @@
   --line-height-normal: 1.5;
   --line-height-relaxed: 1.625;
 
-  /* Border Radii */
+  /* Border Radii (Stitch precision engineering) */
   --radius-xs: 2px;
   --radius-sm: 4px;
   --radius-md: 6px;
@@ -132,22 +153,23 @@
   --radius-xl: 12px;
   --radius-full: 9999px;
 
-  /* Shadows */
-  --shadow-xs: 0 1px 2px 0 rgba(15, 23, 42, 0.05);
-  --shadow-sm: 0 1px 3px 0 rgba(15, 23, 42, 0.08), 0 1px 2px -1px rgba(15, 23, 42, 0.08);
-  --shadow-md: 0 4px 6px -1px rgba(15, 23, 42, 0.08), 0 2px 4px -2px rgba(15, 23, 42, 0.06);
+  /* Shadows (Stitch ambient elevation) */
+  --shadow-xs: 0 1px 2px 0 rgba(15, 23, 42, 0.04);
+  --shadow-sm: 0 1px 3px 0 rgba(15, 23, 42, 0.06), 0 1px 2px -1px rgba(15, 23, 42, 0.04);
+  --shadow-md: 0 4px 6px -1px rgba(15, 23, 42, 0.07), 0 2px 4px -2px rgba(15, 23, 42, 0.05);
   --shadow-lg: 0 10px 15px -3px rgba(15, 23, 42, 0.08), 0 4px 6px -4px rgba(15, 23, 42, 0.04);
-  --shadow-modal: 0 20px 25px -5px rgba(15, 23, 42, 0.15), 0 8px 10px -6px rgba(15, 23, 42, 0.1);
+  --shadow-modal: 0 20px 25px -5px rgba(15, 23, 42, 0.12), 0 8px 10px -6px rgba(15, 23, 42, 0.06);
 
   /* Accessible Focus States */
   --focus-ring-offset: 2px;
-  --focus-ring-color: var(--color-primary);
+  --focus-ring-color: var(--color-secondary);
   --focus-ring: 0 0 0 var(--focus-ring-offset) var(--color-surface), 0 0 0 calc(var(--focus-ring-offset) + 2px) var(--focus-ring-color);
 
   /* Layout Dimensions */
-  --sidebar-width: 256px;
-  --header-height: 60px;
-  --content-max-width: 1240px;
+  --sidebar-width: 260px;
+  --sidebar-collapsed-width: 72px;
+  --header-height: 64px;
+  --content-max-width: 1320px;
   --z-header: 100;
   --z-sidebar: 110;
   --z-modal-backdrop: 200;

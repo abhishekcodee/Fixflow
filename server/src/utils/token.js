@@ -26,7 +26,21 @@ export const verifyToken = (token) => {
   return jwt.verify(token, env.JWT_SECRET);
 };
 
+import crypto from 'crypto';
+
+/**
+ * Generates a cryptographically secure random numeric OTP.
+ * @param {number} [digits=6]
+ * @returns {string} 6-digit string
+ */
+export const generateNumericOtp = (digits = 6) => {
+  const min = 10 ** (digits - 1);
+  const max = 10 ** digits;
+  return crypto.randomInt(min, max).toString();
+};
+
 export default {
   signToken,
-  verifyToken
+  verifyToken,
+  generateNumericOtp
 };

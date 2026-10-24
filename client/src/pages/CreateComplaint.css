@@ -63,3 +63,20 @@
   padding-top: var(--spacing-5);
   border-top: 1px solid var(--color-border);
 }
+
+@media (max-width: 640px) {
+  .form-card {
+    padding: var(--spacing-4);
+  }
+
+  .form-actions {
+    flex-direction: column-reverse;
+    gap: var(--spacing-2);
+  }
+
+  .form-actions button,
+  .form-actions a {
+    width: 100%;
+    justify-content: center;
+  }
+}

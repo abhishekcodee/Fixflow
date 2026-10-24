@@ -36,3 +36,34 @@
   align-items: center;
   gap: var(--spacing-3);
 }
+
+@media (max-width: 640px) {
+  .page-header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--spacing-3);
+    margin-bottom: var(--spacing-4);
+  }
+
+  .page-header__title {
+    font-size: 1.35rem;
+  }
+
+  .page-header__description {
+    font-size: var(--font-size-xs);
+  }
+
+  .page-header__actions {
+    width: 100%;
+  }
+
+  .page-header__actions > * {
+    width: 100%;
+  }
+
+  .page-header__actions button,
+  .page-header__actions a {
+    width: 100%;
+    justify-content: center;
+  }
+}

@@ -6,6 +6,7 @@ import { LoadingState } from '../components/common/LoadingState';
 // Pages
 import { Login } from '../pages/Login';
 import { Register } from '../pages/Register';
+import { ForgotPassword } from '../pages/ForgotPassword';
 import { UserDashboard } from '../pages/UserDashboard';
 import { ComplaintList } from '../pages/ComplaintList';
 import { ComplaintDetail } from '../pages/ComplaintDetail';
@@ -60,6 +61,14 @@ export function AppRoutes() {
         element={
           <PublicRoute>
             <Register />
+          </PublicRoute>
+        }
+      />
+      <Route
+        path="/forgot-password"
+        element={
+          <PublicRoute>
+            <ForgotPassword />
           </PublicRoute>
         }
       />

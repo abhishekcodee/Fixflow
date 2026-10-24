@@ -9,6 +9,8 @@ import { StatusBadge } from '../components/common/StatusBadge';
 import { LoadingState } from '../components/common/LoadingState';
 import { EmptyState } from '../components/common/EmptyState';
 import { ErrorState } from '../components/common/ErrorState';
+import { RefreshIcon, WrenchIcon } from '../components/common/Icons';
+import { ComplaintsMap } from '../components/common/ComplaintsMap';
 import './TechnicianDashboard.css';
 
 export function TechnicianDashboard() {
@@ -19,22 +21,40 @@ export function TechnicianDashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  async function loadWorkOrders() {
-    setLoading(true);
-    setError(null);
+  async function loadWorkOrders(isBackground = false) {
+    if (!isBackground) {
+      setLoading(true);
+      setError(null);
+    }
     try {
       const response = await complaintsApi.list({ limit: 50 });
       setWorkOrders(response?.complaints || []);
     } catch (err) {
-      setError(err.message || 'Unable to retrieve assigned work orders.');
+      if (!isBackground) {
+        setError(err.message || 'Unable to retrieve assigned work orders.');
+      }
     } finally {
-      setLoading(false);
+      if (!isBackground) {
+        setLoading(false);
+      }
     }
   }
 
   useEffect(() => {
     if (isTechnician) {
       loadWorkOrders();
+
+      const intervalId = setInterval(() => {
+        loadWorkOrders(true);
+      }, 8000);
+
+      const handleFocus = () => loadWorkOrders(true);
+      window.addEventListener('focus', handleFocus);
+
+      return () => {
+        clearInterval(intervalId);
+        window.removeEventListener('focus', handleFocus);
+      };
     } else {
       setLoading(false);
     }
@@ -75,8 +95,9 @@ export function TechnicianDashboard() {
         title="Technician Work Queue"
         description="Manage assigned work orders, update job execution states, and log repair resolutions."
         actions={
-          <Button variant="secondary" size="sm" onClick={loadWorkOrders}>
-            ↻ Refresh Work Orders
+          <Button variant="secondary" size="sm" onClick={() => loadWorkOrders(false)} className="btn-with-icon">
+            <RefreshIcon size={14} />
+            <span>Refresh Work Orders</span>
           </Button>
         }
       />
@@ -101,6 +122,14 @@ export function TechnicianDashboard() {
         </Card>
       </div>
 
+      {/* Real-time Technician Work Orders Navigation Map */}
+      <ComplaintsMap
+        complaints={workOrders}
+        title="Assigned Work Orders Navigation Map"
+        subtitle="Geographic building and floor locations for your assigned maintenance service tickets"
+        onRefresh={() => loadWorkOrders(false)}
+      />
+
       {/* Active Work Orders Table */}
       <Card
         title="Assigned Work Orders"
@@ -121,7 +150,7 @@ export function TechnicianDashboard() {
           <EmptyState
             title="No work orders assigned"
             description="You currently have no maintenance complaints assigned to your technician profile."
-            icon="🛠️"
+            icon={<WrenchIcon size={32} />}
           />
         )}
 
@@ -152,7 +181,7 @@ export function TechnicianDashboard() {
                       <StatusBadge status={item.status} />
                     </td>
                     <td className="text-muted text-xs">
-                      {item.location?.building}, Fl {item.location?.floor}, Unit {item.location?.roomOrUnit}
+                      {item.location?.building}, Fl {item.location?.floor}, Unit {item.location?.roomOrUnit || item.location?.room}
                     </td>
                     <td>
                       <Link to={`/complaints/${item._id}`}>

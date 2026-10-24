@@ -1,5 +1,6 @@
 import { useAuth } from '../../context/AuthContext';
 import { Button } from '../common/Button';
+import { MenuIcon, LogoutIcon } from '../common/Icons';
 import './Header.css';
 
 export function Header({ onMenuToggle }) {
@@ -14,7 +15,7 @@ export function Header({ onMenuToggle }) {
           onClick={onMenuToggle}
           aria-label="Toggle navigation drawer"
         >
-          <span className="app-header__menu-icon" aria-hidden="true">☰</span>
+          <MenuIcon size={20} className="app-header__menu-icon" />
         </button>
 
         <span className="app-header__brand-mobile">FixFlow</span>
@@ -32,9 +33,11 @@ export function Header({ onMenuToggle }) {
           variant="secondary"
           size="sm"
           onClick={logout}
+          className="btn-with-icon"
           aria-label="Sign out of FixFlow"
         >
-          Sign Out
+          <LogoutIcon size={14} />
+          <span>Sign Out</span>
         </Button>
       </div>
     </header>

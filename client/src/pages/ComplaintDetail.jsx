@@ -11,6 +11,8 @@ import { ErrorState } from '../components/common/ErrorState';
 import { Modal } from '../components/common/Modal';
 import { Select } from '../components/common/Select';
 import { Textarea } from '../components/common/Textarea';
+import { ZapIcon } from '../components/common/Icons';
+import { ComplaintsMap } from '../components/common/ComplaintsMap';
 import './ComplaintDetail.css';
 
 export function ComplaintDetail() {
@@ -255,7 +257,7 @@ export function ComplaintDetail() {
               <div className="metadata-item">
                 <span className="metadata-label">Floor / Unit</span>
                 <span className="metadata-value">
-                  Floor {complaint.location?.floor}, Unit {complaint.location?.roomOrUnit}
+                  Floor {complaint.location?.floor}, Unit {complaint.location?.roomOrUnit || complaint.location?.room}
                 </span>
               </div>
 
@@ -272,6 +274,14 @@ export function ComplaintDetail() {
               <p className="detail-description-text">{complaint.description}</p>
             </div>
           </Card>
+
+          {/* Incident Geo-Location Map */}
+          <ComplaintsMap
+            complaints={[complaint]}
+            title="Incident Location Map"
+            subtitle={`Geospatial incident location for ticket ${complaint.complaintNumber} (${complaint.location?.building || 'Campus'})`}
+            onRefresh={loadData}
+          />
 
           {/* Activity History Audit Trail */}
           <Card title="Activity History & Audit Trail" className="detail-section-card">
@@ -330,9 +340,10 @@ export function ComplaintDetail() {
                     variant="primary"
                     size="sm"
                     onClick={openAssignModal}
-                    className="dispatch-detail-btn"
+                    className="dispatch-detail-btn btn-with-icon"
                   >
-                    ⚡ Dispatch Technician
+                    <ZapIcon size={14} />
+                    <span>Dispatch Technician</span>
                   </Button>
                 )}
                 {isAdmin && complaint.status !== 'submitted' && (

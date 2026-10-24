@@ -84,3 +84,36 @@
   border-top: 1px solid var(--color-border);
   background-color: var(--color-surface-subtle);
 }
+
+@media (max-width: 640px) {
+  .modal-backdrop {
+    padding: var(--spacing-2);
+    align-items: flex-end;
+  }
+
+  .modal-container {
+    max-height: 90vh;
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
+  }
+
+  .modal-header {
+    padding: var(--spacing-3) var(--spacing-4);
+  }
+
+  .modal-body {
+    padding: var(--spacing-4);
+  }
+
+  .modal-footer {
+    flex-direction: column-reverse;
+    gap: var(--spacing-2);
+    padding: var(--spacing-3) var(--spacing-4);
+  }
+
+  .modal-footer button,
+  .modal-footer a {
+    width: 100%;
+    justify-content: center;
+  }
+}
