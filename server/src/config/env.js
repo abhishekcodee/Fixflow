@@ -28,20 +28,11 @@ const validateNodeEnv = (envStr) => {
 };
 
 const resolveMongoUri = (uriStr, nodeEnv) => {
-  if (nodeEnv === 'production' && !uriStr) {
-    throw new Error('MONGODB_URI environment variable is required in production mode.');
-  }
-  return uriStr || 'mongodb://127.0.0.1:27017/fixflow_dev';
+  return uriStr || (nodeEnv === 'production' ? '' : 'mongodb://127.0.0.1:27017/fixflow_dev');
 };
 
 const validateJwtSecret = (secret, nodeEnv) => {
-  if (nodeEnv === 'production') {
-    if (!secret || secret.length < 32) {
-      throw new Error('JWT_SECRET environment variable is required in production and must be at least 32 characters long.');
-    }
-    return secret;
-  }
-  return secret || 'fixflow_development_jwt_secret_key_minimum_32_characters_for_security';
+  return secret || (nodeEnv === 'production' ? '' : 'fixflow_development_jwt_secret_key_minimum_32_characters_for_security');
 };
 
 const validateJwtExpiresIn = (expiresIn) => {

@@ -17,8 +17,22 @@ app.use(helmet());
 app.use(
   cors({
     origin: (origin, callback) => {
-      // Allow requests with no origin (e.g. mobile apps, curl, server-to-server) or matching CLIENT_URL
-      if (!origin || origin === env.CLIENT_URL || env.NODE_ENV === 'development') {
+      // Allow requests with no origin (e.g. mobile apps, curl, server-to-server)
+      if (!origin) return callback(null, true);
+
+      // Support comma-separated origins in CLIENT_URL
+      const allowedOrigins = (env.CLIENT_URL || '')
+        .split(',')
+        .map((o) => o.trim())
+        .filter(Boolean);
+
+      // Allow in development, matching CLIENT_URL, or any *.vercel.app deployment
+      const isAllowed =
+        env.NODE_ENV === 'development' ||
+        allowedOrigins.includes(origin) ||
+        /^https:\/\/([a-zA-Z0-9-_]+)\.vercel\.app$/.test(origin);
+
+      if (isAllowed) {
         callback(null, true);
       } else {
         callback(new Error(`CORS blocked for origin: ${origin}`));

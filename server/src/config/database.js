@@ -11,6 +11,7 @@ const READY_STATES = {
 };
 
 let mongoMemoryInstance = null;
+let cachedConnectionPromise = null;
 
 /**
  * Returns current MongoDB connection health state.
@@ -39,6 +40,19 @@ export const connectDatabase = async () => {
     return true;
   }
 
+  if (cachedConnectionPromise) {
+    try {
+      await cachedConnectionPromise;
+      return true;
+    } catch {
+      cachedConnectionPromise = null;
+    }
+  }
+
+  if (env.NODE_ENV === 'production' && !env.MONGODB_URI) {
+    throw new Error('MONGODB_URI environment variable is required in production mode.');
+  }
+
   // Register connection lifecycle listeners
   mongoose.connection.on('connected', () => {
     logger.info(`MongoDB connection established [Database: ${mongoose.connection.name}, Host: ${mongoose.connection.host}]`);
@@ -53,12 +67,16 @@ export const connectDatabase = async () => {
   });
 
   try {
-    logger.info(`Attempting to connect to MongoDB at: ${env.MONGODB_URI.replace(/\/\/.*@/, '//<credentials>@')}`);
+    const sanitizedUri = (env.MONGODB_URI || '').replace(/\/\/.*@/, '//<credentials>@');
+    logger.info(`Attempting to connect to MongoDB at: ${sanitizedUri}`);
 
-    await mongoose.connect(env.MONGODB_URI, {
-      serverSelectionTimeoutMS: 2000, // 2-second timeout for rapid failover to local fallback
-      connectTimeoutMS: 2000
+    const timeout = env.NODE_ENV === 'production' ? 10000 : 2000;
+    cachedConnectionPromise = mongoose.connect(env.MONGODB_URI, {
+      serverSelectionTimeoutMS: timeout,
+      connectTimeoutMS: timeout
     });
+
+    await cachedConnectionPromise;
 
     if (env.NODE_ENV === 'development') {
       await seedInitialData();
