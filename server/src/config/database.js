@@ -78,7 +78,7 @@ export const connectDatabase = async () => {
 
     await cachedConnectionPromise;
 
-    if (env.NODE_ENV === 'development') {
+    if (env.NODE_ENV === 'development' || process.env.ALLOW_SEED_ON_EMPTY === 'true') {
       await seedInitialData();
     }
 

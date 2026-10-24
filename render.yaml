@@ -1,0 +1,77 @@
+# ==============================================================================
+# FixFlow Render Blueprint Specification (render.yaml)
+# Use this Blueprint to deploy both the FixFlow Backend Web Service and 
+# Frontend Static Site with unified configuration and zero manual guesswork.
+# ==============================================================================
+
+services:
+  # ----------------------------------------------------------------------------
+  # 1. FixFlow Backend REST API (Web Service)
+  # ----------------------------------------------------------------------------
+  - type: web
+    name: fixflow-backend
+    runtime: node
+    plan: free
+    region: oregon
+    buildCommand: npm --prefix server install
+    startCommand: npm --prefix server start
+    healthCheckPath: /api/v1/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 5000
+      - key: CLIENT_URL
+        value: https://fixflow-71c7.onrender.com
+      # MongoDB Atlas connection string (required)
+      # e.g.: mongodb+srv://<username>:<password>@cluster0.mongodb.net/fixflow?retryWrites=true&w=majority
+      - key: MONGODB_URI
+        sync: false
+      # Automatically generated high-entropy 32-character secret for signing JWTs
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_EXPIRES_IN
+        value: 7d
+      # Automatically seed default demo accounts (admin, technician, user) if database is newly created
+      - key: ALLOW_SEED_ON_EMPTY
+        value: "true"
+      # GitHub OAuth 2.0 Credentials (from GitHub Developer Settings -> OAuth Apps)
+      - key: GITHUB_CLIENT_ID
+        sync: false
+      - key: GITHUB_CLIENT_SECRET
+        sync: false
+      # Gmail SMTP for Real Email OTP verification (Google App Password)
+      - key: SMTP_HOST
+        value: smtp.gmail.com
+      - key: SMTP_PORT
+        value: "465"
+      - key: SMTP_SECURE
+        value: "true"
+      - key: SMTP_USER
+        sync: false
+      - key: SMTP_PASS
+        sync: false
+      - key: FROM_EMAIL
+        sync: false
+      - key: FROM_NAME
+        value: FixFlow Facilities Care
+
+  # ----------------------------------------------------------------------------
+  # 2. FixFlow React + Vite Frontend (Static Site)
+  # ----------------------------------------------------------------------------
+  - type: static
+    name: fixflow-frontend
+    plan: free
+    region: oregon
+    buildCommand: npm --prefix client install && npm --prefix client run build
+    staticPublishPath: client/dist
+    routes:
+      # SPA rewrite rule: routes all frontend browser paths to index.html
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    envVars:
+      # Production backend API URL (e.g., https://fixflow-backend.onrender.com/api/v1)
+      # In Vite, VITE_* environment variables are baked in during the build step.
+      - key: VITE_API_BASE_URL
+        sync: false

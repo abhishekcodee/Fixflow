@@ -1,3 +1,5 @@
+import path from 'path';
+import fs from 'fs';
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
@@ -23,14 +25,17 @@ app.use(
       // Support comma-separated origins in CLIENT_URL
       const allowedOrigins = (env.CLIENT_URL || '')
         .split(',')
-        .map((o) => o.trim())
+        .map((o) => o.trim().replace(/\/+$/, ''))
         .filter(Boolean);
 
-      // Allow in development, matching CLIENT_URL, or any *.vercel.app deployment
+      const normalizedOrigin = origin.replace(/\/+$/, '');
+
+      // Allow in development, matching CLIENT_URL, or any *.vercel.app / *.onrender.com deployment
       const isAllowed =
         env.NODE_ENV === 'development' ||
-        allowedOrigins.includes(origin) ||
-        /^https:\/\/([a-zA-Z0-9-_]+)\.vercel\.app$/.test(origin);
+        allowedOrigins.includes(normalizedOrigin) ||
+        /^https:\/\/([a-zA-Z0-9-_]+)\.vercel\.app$/.test(normalizedOrigin) ||
+        /^https:\/\/([a-zA-Z0-9-_]+)\.onrender\.com$/.test(normalizedOrigin);
 
       if (isAllowed) {
         callback(null, true);
@@ -49,7 +54,13 @@ app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ extended: true, limit: '1mb' }));
 
 // 4. API Welcome / Base Route
-app.get('/', (req, res) => {
+app.get('/', (req, res, next) => {
+  // If static client dist exists, let static handler serve the SPA root
+  const clientDistPath = path.resolve('dist');
+  if (fs.existsSync(clientDistPath) && fs.existsSync(path.join(clientDistPath, 'index.html'))) {
+    return next();
+  }
+
   res.status(200).json({
     success: true,
     message: 'Welcome to FixFlow API Server',
@@ -68,10 +79,22 @@ app.use('/api/v1/health', healthRoutes);
 app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/complaints', complaintRoutes);
 
-// 6. 404 Route Not Found Middleware (Must be registered after all active routes)
+// 6. Serve static client bundle in production if built dist directory exists
+const clientDistPath = path.resolve('dist');
+if (fs.existsSync(clientDistPath) && fs.existsSync(path.join(clientDistPath, 'index.html'))) {
+  app.use(express.static(clientDistPath));
+  app.get('*', (req, res, next) => {
+    if (req.path.startsWith('/api/')) {
+      return next();
+    }
+    res.sendFile(path.join(clientDistPath, 'index.html'));
+  });
+}
+
+// 7. 404 Route Not Found Middleware (Must be registered after all active routes)
 app.use(notFound);
 
-// 7. Centralized Error-Handling Middleware (Must be the final middleware)
+// 8. Centralized Error-Handling Middleware (Must be the final middleware)
 app.use(errorHandler);
 
 export default app;

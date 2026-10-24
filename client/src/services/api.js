@@ -50,8 +50,8 @@ export async function request(endpoint, options = {}) {
 
   // Parse response body if present
   let data = null;
-  const contentType = response.headers.get('content-type');
-  if (contentType && contentType.includes('application/json')) {
+  const contentType = response.headers.get('content-type') || '';
+  if (contentType.includes('application/json')) {
     try {
       data = await response.json();
     } catch {
@@ -61,11 +61,39 @@ export async function request(endpoint, options = {}) {
 
   if (!response.ok) {
     const errorPayload = data?.error || {};
-    const message = errorPayload.message || response.statusText || 'Request failed';
+    let message = errorPayload.message;
+
+    if (!message) {
+      if (response.status === 404) {
+        message = `API endpoint not found (404) at ${url}. Please verify that the backend API is deployed and VITE_API_BASE_URL is configured correctly.`;
+      } else if (response.status >= 500) {
+        message = `FixFlow backend service error (${response.status}). Please check server logs and database connectivity.`;
+      } else {
+        message = response.statusText || `Request failed with status ${response.status}`;
+      }
+    }
+
     const code = errorPayload.code || `HTTP_${response.status}`;
     const details = errorPayload.details || null;
 
     throw new ApiError(message, response.status, code, details);
+  }
+
+  // Handle 204 No Content
+  if (response.status === 204) {
+    return null;
+  }
+
+  // If response is 200/201 but NOT JSON or data is null, request hit a static file server or CDN instead of the API
+  if (!data) {
+    throw new ApiError(
+      `Received an invalid or non-JSON response from ${url} (Content-Type: "${contentType || 'none'}"). ` +
+      `This typically occurs when VITE_API_BASE_URL is missing in your Render Static Site settings, ` +
+      `causing API requests to hit the frontend static server instead of your FixFlow backend server. ` +
+      `Please configure VITE_API_BASE_URL in your Render dashboard pointing to your backend Web Service (e.g. https://fixflow-api.onrender.com/api/v1).`,
+      response.status,
+      'INVALID_API_RESPONSE'
+    );
   }
 
   if (data?.data && typeof data.data === 'object' && !Array.isArray(data.data)) {
