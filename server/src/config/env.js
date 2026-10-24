@@ -54,7 +54,9 @@ export const env = Object.freeze({
   SMTP_USER: process.env.SMTP_USER || '',
   SMTP_PASS: process.env.SMTP_PASS || '',
   FROM_EMAIL: process.env.FROM_EMAIL || process.env.SMTP_USER || 'no-reply@fixflow.com',
-  FROM_NAME: process.env.FROM_NAME || 'FixFlow Facilities Care'
+  FROM_NAME: process.env.FROM_NAME || 'FixFlow Facilities Care',
+  GITHUB_CLIENT_ID: process.env.GITHUB_CLIENT_ID || '',
+  GITHUB_CLIENT_SECRET: process.env.GITHUB_CLIENT_SECRET || ''
 });
 
 export default env;

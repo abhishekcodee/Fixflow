@@ -409,3 +409,63 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* OAuth Social Login Styles */
+.auth-oauth-divider {
+  display: flex;
+  align-items: center;
+  margin: var(--spacing-5) 0;
+  text-align: center;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.auth-oauth-divider::before,
+.auth-oauth-divider::after {
+  content: '';
+  flex: 1;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.auth-oauth-divider span {
+  padding: 0 var(--spacing-3);
+}
+
+.auth-github-btn {
+  width: 100%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-3);
+  background-color: #24292f;
+  color: #ffffff;
+  border: 1px solid #24292f;
+  border-radius: var(--radius-md);
+  padding: 10px 16px;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  min-height: 44px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.auth-github-btn:hover:not(:disabled) {
+  background-color: #1b1f23;
+  border-color: #1b1f23;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.15);
+}
+
+.auth-github-btn:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.auth-github-btn:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+

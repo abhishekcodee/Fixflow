@@ -25,8 +25,23 @@ const userSchema = new mongoose.Schema(
     },
     passwordHash: {
       type: String,
-      required: [true, 'Password hash is required'],
+      required: [
+        function () {
+          return !this.githubId;
+        },
+        'Password hash is required'
+      ],
       select: false // Never project or return passwordHash in standard queries
+    },
+    githubId: {
+      type: String,
+      unique: true,
+      sparse: true,
+      trim: true
+    },
+    avatarUrl: {
+      type: String,
+      trim: true
     },
     role: {
       type: String,
@@ -92,6 +107,8 @@ userSchema.methods.toSafeObject = function () {
     name: this.name,
     email: this.email,
     role: this.role,
+    avatarUrl: this.avatarUrl || null,
+    githubId: this.githubId || null,
     isActive: this.isActive,
     isVerified: this.isVerified,
     createdAt: this.createdAt,

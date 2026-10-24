@@ -561,6 +561,179 @@ export const getTechnicians = async (req, res, next) => {
   }
 };
 
+/**
+ * @route   GET /api/v1/auth/github/config
+ * @desc    Returns public GitHub OAuth client configuration
+ * @access  Public
+ */
+export const getGithubConfig = (req, res) => {
+  return res.status(200).json({
+    success: true,
+    data: {
+      clientId: env.GITHUB_CLIENT_ID || null,
+      isConfigured: Boolean(env.GITHUB_CLIENT_ID && env.GITHUB_CLIENT_SECRET)
+    }
+  });
+};
+
+/**
+ * @route   POST /api/v1/auth/github
+ * @desc    Exchanges GitHub OAuth temporary code for access token, fetches profile and logs in or creates user
+ * @access  Public
+ */
+export const githubLogin = async (req, res, next) => {
+  try {
+    const { code } = req.body;
+    if (!code) {
+      return next(new AppError('Authorization code is required from GitHub OAuth.', 400, 'MISSING_CODE'));
+    }
+
+    if (!env.GITHUB_CLIENT_ID || !env.GITHUB_CLIENT_SECRET) {
+      return next(
+        new AppError(
+          'GitHub OAuth is not configured on the server. Please set GITHUB_CLIENT_ID and GITHUB_CLIENT_SECRET.',
+          503,
+          'GITHUB_AUTH_NOT_CONFIGURED'
+        )
+      );
+    }
+
+    // 1. Exchange temporary code for access token with GitHub API
+    const tokenResponse = await fetch('https://github.com/login/oauth/access_token', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Accept: 'application/json'
+      },
+      body: JSON.stringify({
+        client_id: env.GITHUB_CLIENT_ID,
+        client_secret: env.GITHUB_CLIENT_SECRET,
+        code
+      })
+    });
+
+    const tokenData = await tokenResponse.json();
+
+    if (tokenData.error || !tokenData.access_token) {
+      logger.warn(`GitHub OAuth token exchange failed: ${tokenData.error_description || tokenData.error}`);
+      return next(
+        new AppError(
+          tokenData.error_description || 'Failed to exchange authorization code with GitHub.',
+          400,
+          'GITHUB_EXCHANGE_FAILED'
+        )
+      );
+    }
+
+    const accessToken = tokenData.access_token;
+
+    // 2. Fetch user profile from GitHub
+    const userResponse = await fetch('https://api.github.com/user', {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        'User-Agent': 'FixFlow-App',
+        Accept: 'application/json'
+      }
+    });
+
+    if (!userResponse.ok) {
+      return next(new AppError('Unable to retrieve user profile from GitHub.', 502, 'GITHUB_PROFILE_ERROR'));
+    }
+
+    const githubProfile = await userResponse.json();
+    const githubId = String(githubProfile.id);
+
+    // 3. Resolve primary email address (public or via emails endpoint)
+    let email = githubProfile.email;
+    if (!email) {
+      const emailsResponse = await fetch('https://api.github.com/user/emails', {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          'User-Agent': 'FixFlow-App',
+          Accept: 'application/json'
+        }
+      });
+
+      if (emailsResponse.ok) {
+        const emails = await emailsResponse.json();
+        if (Array.isArray(emails)) {
+          const primaryVerified =
+            emails.find((e) => e.primary && e.verified) ||
+            emails.find((e) => e.verified) ||
+            emails[0];
+          if (primaryVerified) {
+            email = primaryVerified.email;
+          }
+        }
+      }
+    }
+
+    if (!email) {
+      email = `${githubProfile.login.toLowerCase()}@users.noreply.github.com`;
+    }
+
+    const normalizedEmail = email.trim().toLowerCase();
+    const displayName = (githubProfile.name || githubProfile.login || 'GitHub User').trim().slice(0, 60);
+    const avatarUrl = githubProfile.avatar_url || null;
+
+    // 4. Find existing user by githubId or email
+    let user = await User.findOne({
+      $or: [{ githubId }, { email: normalizedEmail }]
+    });
+
+    if (user) {
+      let modified = false;
+      if (!user.githubId) {
+        user.githubId = githubId;
+        modified = true;
+      }
+      if (!user.avatarUrl && avatarUrl) {
+        user.avatarUrl = avatarUrl;
+        modified = true;
+      }
+      if (!user.isVerified) {
+        user.isVerified = true;
+        modified = true;
+      }
+      if (modified) {
+        await user.save();
+      }
+    } else {
+      user = await User.create({
+        name: displayName,
+        email: normalizedEmail,
+        githubId,
+        avatarUrl,
+        role: 'user',
+        isVerified: true,
+        isActive: true
+      });
+    }
+
+    if (!user.isActive) {
+      return next(
+        new AppError('Your account has been deactivated. Please contact support.', 403, 'ACCOUNT_DEACTIVATED')
+      );
+    }
+
+    // 5. Generate FixFlow JWT token
+    const token = signToken(user);
+
+    logger.info(`User ${user.email} successfully authenticated via GitHub OAuth (GitHub ID: ${githubId})`);
+
+    return res.status(200).json({
+      success: true,
+      message: 'Successfully authenticated with GitHub.',
+      data: {
+        user: user.toSafeObject(),
+        token
+      }
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
 export default {
   sendOtp,
   verifyOtp,
@@ -570,5 +743,7 @@ export default {
   resetPassword,
   getMe,
   logout,
-  getTechnicians
+  getTechnicians,
+  getGithubConfig,
+  githubLogin
 };

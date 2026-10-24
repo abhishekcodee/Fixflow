@@ -91,6 +91,18 @@ export function AuthProvider({ children }) {
     }
   }, [token]);
 
+  const loginWithGithub = useCallback(async (code) => {
+    setError(null);
+    const data = await authApi.githubLogin(code);
+    if (data?.token && data?.user) {
+      localStorage.setItem('fixflow_token', data.token);
+      setToken(data.token);
+      setUser(data.user);
+      return data.user;
+    }
+    throw new Error('GitHub authentication response was missing token or user data.');
+  }, []);
+
   const value = {
     user,
     token,
@@ -100,6 +112,7 @@ export function AuthProvider({ children }) {
     role: user?.role || null,
     login,
     register,
+    loginWithGithub,
     logout,
     setSession,
   };

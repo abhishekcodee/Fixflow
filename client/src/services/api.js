@@ -97,6 +97,8 @@ export const authApi = {
   getProfile: () => request('/auth/me', { method: 'GET' }),
   logout: () => request('/auth/logout', { method: 'POST' }),
   getTechnicians: () => request('/auth/technicians', { method: 'GET' }),
+  getGithubConfig: () => request('/auth/github/config', { method: 'GET' }),
+  githubLogin: (code) => request('/auth/github', { method: 'POST', body: { code } }),
 };
 
 export const complaintsApi = {

@@ -8,7 +8,9 @@ import {
   resetPassword,
   getMe,
   logout,
-  getTechnicians
+  getTechnicians,
+  getGithubConfig,
+  githubLogin
 } from '../controllers/authController.js';
 import { authenticate, authorize } from '../middleware/auth.js';
 
@@ -24,6 +26,12 @@ router.post('/login', login);
 router.post('/logout', logout);
 router.post('/forgot-password', forgotPassword);
 router.post('/reset-password', resetPassword);
+
+/**
+ * GitHub OAuth 2.0 Routes
+ */
+router.get('/github/config', getGithubConfig);
+router.post('/github', githubLogin);
 
 /**
  * Protected Identity Route

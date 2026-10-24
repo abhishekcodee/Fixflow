@@ -13,6 +13,7 @@ import { ComplaintDetail } from '../pages/ComplaintDetail';
 import { CreateComplaint } from '../pages/CreateComplaint';
 import { AdminDashboard } from '../pages/AdminDashboard';
 import { TechnicianDashboard } from '../pages/TechnicianDashboard';
+import { GitHubCallback } from '../pages/GitHubCallback';
 import { NotFound } from '../pages/NotFound';
 
 export function ProtectedRoute({ children }) {
@@ -69,6 +70,14 @@ export function AppRoutes() {
         element={
           <PublicRoute>
             <ForgotPassword />
+          </PublicRoute>
+        }
+      />
+      <Route
+        path="/auth/github/callback"
+        element={
+          <PublicRoute>
+            <GitHubCallback />
           </PublicRoute>
         }
       />
