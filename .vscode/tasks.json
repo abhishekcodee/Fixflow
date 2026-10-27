@@ -17,7 +17,7 @@
                 "background": {
                     "activeOnStart": true,
                     "beginsPattern": ".*VITE.*",
-                    "endsPattern": ".*Local:.*http://localhost:5173.*"
+                    "endsPattern": ".*(Local:|http://localhost:5173|http://127.0.0.1:5173).*"
                 }
             }
         },
@@ -40,6 +40,15 @@
                     "endsPattern": ".*FixFlow API Server listening on port.*"
                 }
             }
+        },
+        {
+            "label": "Start All Services",
+            "dependsOn": [
+                "Start Server (Express)",
+                "Start Client (Vite)"
+            ],
+            "dependsOrder": "parallel",
+            "problemMatcher": []
         }
     ]
 }

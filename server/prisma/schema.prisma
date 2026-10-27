@@ -1,0 +1,124 @@
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id           String    @id @default(uuid())
+  name         String    @db.VarChar(60)
+  email        String    @unique @db.VarChar(191)
+  passwordHash String?   @db.VarChar(255)
+  githubId     String?   @unique @db.VarChar(191)
+  avatarUrl    String?   @db.Text
+  role         String    @default("user") @db.VarChar(20)
+  isActive     Boolean   @default(true)
+  isVerified   Boolean   @default(false)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  createdComplaints  Complaint[]        @relation("ComplaintCreator")
+  assignedComplaints Complaint[]        @relation("ComplaintTechnician")
+  historyActions     ComplaintHistory[] @relation("HistoryActor")
+
+  @@index([role])
+}
+
+model Complaint {
+  id                  String    @id @default(uuid())
+  complaintNumber     String    @unique @db.VarChar(50)
+  title               String    @db.VarChar(120)
+  description         String    @db.Text
+  category            String    @db.VarChar(50)
+  priority            String    @default("medium") @db.VarChar(20)
+  status              String    @default("submitted") @db.VarChar(30)
+  
+  // Location fields
+  building            String    @db.VarChar(60)
+  floor               String    @db.VarChar(30)
+  room                String    @db.VarChar(30)
+  locationDescription String?   @db.VarChar(255)
+  latitude            Float?
+  longitude           Float?
+  address             String?   @db.VarChar(255)
+
+  // Relationships
+  createdById         String
+  createdBy           User      @relation("ComplaintCreator", fields: [createdById], references: [id], onDelete: Cascade)
+
+  assignedToId        String?
+  assignedTo          User?     @relation("ComplaintTechnician", fields: [assignedToId], references: [id], onDelete: SetNull)
+  assignedAt          DateTime?
+
+  // Resolution lifecycle
+  resolutionNotes     String?   @db.Text
+  resolvedAt          DateTime?
+  closedAt            DateTime?
+
+  // Resident feedback
+  feedbackRating      Int?
+  feedbackComments    String?   @db.Text
+  feedbackSubmittedAt DateTime?
+
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+
+  history             ComplaintHistory[]
+
+  @@index([createdById, createdAt(sort: Desc)])
+  @@index([assignedToId, status])
+  @@index([status, priority, createdAt(sort: Desc)])
+}
+
+model ComplaintHistory {
+  id            String    @id @default(uuid())
+  complaintId   String
+  complaint     Complaint @relation(fields: [complaintId], references: [id], onDelete: Cascade)
+  actorId       String
+  actor         User      @relation("HistoryActor", fields: [actorId], references: [id], onDelete: Cascade)
+  action        String    @db.VarChar(50)
+  previousState Json?
+  newState      Json?
+  note          String?   @db.Text
+  timestamp     DateTime  @default(now())
+
+  @@index([complaintId, timestamp])
+}
+
+model EmailVerification {
+  id                  String   @id @default(uuid())
+  email               String   @unique @db.VarChar(191)
+  otpHash             String   @db.VarChar(255)
+  pendingName         String   @db.VarChar(60)
+  pendingPasswordHash String   @db.VarChar(255)
+  pendingRole         String   @default("user") @db.VarChar(20)
+  attempts            Int      @default(0)
+  lastResendAt        DateTime @default(now())
+  expiresAt           DateTime
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  @@index([expiresAt])
+}
+
+model PasswordReset {
+  id        String   @id @default(uuid())
+  email     String   @db.VarChar(191)
+  tokenHash String   @db.VarChar(255)
+  attempts  Int      @default(0)
+  used      Boolean  @default(false)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([email])
+  @@index([expiresAt])
+}
+
+model Counter {
+  id  String @id
+  seq Int    @default(0)
+}

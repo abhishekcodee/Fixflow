@@ -24,6 +24,7 @@
   "author": "FixFlow Team",
   "license": "MIT",
   "dependencies": {
+    "@prisma/client": "^6.4.1",
     "bcryptjs": "^3.0.3",
     "cors": "^2.8.5",
     "dotenv": "^16.4.7",
@@ -31,7 +32,8 @@
     "helmet": "^8.0.0",
     "jsonwebtoken": "^9.0.3",
     "mongoose": "^8.9.5",
-    "nodemailer": "^10.2.1"
+    "nodemailer": "^10.2.1",
+    "prisma": "^6.4.1"
   },
   "devDependencies": {
     "mongodb-memory-server": "^11.3.0",

@@ -20,7 +20,7 @@ FixFlow replaces chaotic, informal reporting methods (WhatsApp threads, verbal c
 | **Frontend** | React.js (v18+) with Vite | Lightning-fast HMR, clean component structure, modular styling. |
 | **Styling** | Vanilla CSS Design System | Custom CSS variables for tokens, responsive layouts, accessible contrast. |
 | **Backend** | Node.js & Express.js | RESTful JSON API, modular middleware architecture, centralized error handling. |
-| **Database** | MongoDB with Mongoose ODM | Document-oriented schema validation, compound indexes, lean queries. |
+| **Database** | MySQL with Prisma ORM | Relational schema integrity, foreign keys, compound indexes, type-safe queries. |
 | **Authentication** | JWT & Bcrypt | Stateless token authorization and role-based access control (RBAC). |
 | **Testing** | Vitest + React Testing Library / Supertest / Playwright | Frontend unit/component tests, backend HTTP integration tests, & browser E2E test suites. |
 
@@ -103,16 +103,22 @@ cp client/.env.example client/.env
 
 ### 2. Running FixFlow Locally
 
+#### Option A: Unified Dev Server (Recommended)
+From the project root:
+```bash
+npm run dev          # Automatically spins up both Express backend (:5000) and Vite frontend (:5173)
+```
+
+#### Option B: VS Code / Antigravity One-Click Debug (F5)
+Press **F5** or click the green Play button on **`Launch Chrome against localhost`** or **`Full Stack (Server + Client Chrome)`**. VS Code will automatically start Vite, launch the backend, and open Chrome directly at `http://localhost:5173`.
+
+#### Option C: Separate Terminals
 ```bash
 # Terminal 1 — Start Backend Server (http://localhost:5000):
-cd server
-npm install
-npm run dev      # Or 'npm run dev:watch' for zero-dependency watch mode
+cd server && npm run dev
 
 # Terminal 2 — Start Frontend Client (http://localhost:5173):
-cd client
-npm install
-npm run dev
+cd client && npm run dev
 ```
 
 ### 3. Verification & Test Commands

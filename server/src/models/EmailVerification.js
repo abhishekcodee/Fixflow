@@ -1,69 +1,73 @@
-import mongoose from 'mongoose';
+import prisma from '../config/prisma.js';
 import bcrypt from 'bcryptjs';
 
-const emailVerificationSchema = new mongoose.Schema(
-  {
-    email: {
-      type: String,
-      required: [true, 'Email address is required'],
-      lowercase: true,
-      trim: true,
-      index: true
-    },
-    otpHash: {
-      type: String,
-      required: [true, 'OTP hash is required']
-    },
-    pendingName: {
-      type: String,
-      required: [true, 'Pending name is required'],
-      trim: true
-    },
-    pendingPasswordHash: {
-      type: String,
-      required: [true, 'Pending password hash is required']
-    },
-    pendingRole: {
-      type: String,
-      enum: ['user', 'technician'],
-      default: 'user'
-    },
-    attempts: {
-      type: Number,
-      default: 0
-    },
-    lastResendAt: {
-      type: Date,
-      default: Date.now
-    },
-    expiresAt: {
-      type: Date,
-      required: true,
-      index: { expires: 0 } // Automatic TTL expiration
-    }
-  },
-  {
-    timestamps: true
+const attachMethods = (ev) => {
+  if (!ev) return null;
+  const item = { ...ev };
+  item._id = item.id;
+  item.compareOtp = async function (candidateOtp) {
+    return bcrypt.compare(String(candidateOtp).trim(), this.otpHash);
+  };
+  return item;
+};
+
+export class EmailVerification {
+  static async hashOtp(plainOtp) {
+    const salt = await bcrypt.genSalt(10);
+    return bcrypt.hash(String(plainOtp).trim(), salt);
   }
-);
 
-/**
- * Hashes a plaintext 6-digit OTP using bcrypt with 10 salt rounds.
- */
-emailVerificationSchema.statics.hashOtp = async function (plainOtp) {
-  const salt = await bcrypt.genSalt(10);
-  return bcrypt.hash(String(plainOtp).trim(), salt);
-};
+  static async findOne(query = {}) {
+    const email = query.email ? String(query.email).trim().toLowerCase() : undefined;
+    if (!email) return null;
+    const item = await prisma.emailVerification.findFirst({
+      where: { email }
+    });
+    return attachMethods(item);
+  }
 
-/**
- * Compares candidate OTP against stored bcrypt hash.
- */
-emailVerificationSchema.methods.compareOtp = async function (candidateOtp) {
-  return bcrypt.compare(String(candidateOtp).trim(), this.otpHash);
-};
+  static async findOneAndUpdate(filter, update) {
+    const email = filter.email ? String(filter.email).trim().toLowerCase() : undefined;
+    const data = {
+      email,
+      otpHash: update.otpHash,
+      pendingName: update.pendingName,
+      pendingPasswordHash: update.pendingPasswordHash,
+      pendingRole: update.pendingRole || 'user',
+      attempts: update.attempts !== undefined ? update.attempts : 0,
+      lastResendAt: update.lastResendAt || new Date(),
+      expiresAt: update.expiresAt
+    };
 
-export const EmailVerification =
-  mongoose.models.EmailVerification ||
-  mongoose.model('EmailVerification', emailVerificationSchema);
+    const item = await prisma.emailVerification.upsert({
+      where: { email },
+      update: data,
+      create: data
+    });
+    return attachMethods(item);
+  }
+
+  static async deleteOne(filter = {}) {
+    const email = filter.email ? String(filter.email).trim().toLowerCase() : undefined;
+    if (!email) return { deletedCount: 0 };
+    try {
+      await prisma.emailVerification.delete({ where: { email } });
+      return { deletedCount: 1 };
+    } catch {
+      return { deletedCount: 0 };
+    }
+  }
+
+  static async deleteMany(filter = {}) {
+    if (filter.expiresAt && filter.expiresAt.$lt) {
+      const res = await prisma.emailVerification.deleteMany({
+        where: { expiresAt: { lt: filter.expiresAt.$lt } }
+      });
+      return { deletedCount: res.count };
+    }
+    const res = await prisma.emailVerification.deleteMany({});
+    return { deletedCount: res.count };
+  }
+}
 
 export default EmailVerification;

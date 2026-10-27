@@ -1,27 +1,20 @@
-import mongoose from 'mongoose';
+import prisma from '../config/prisma.js';
 
-const counterSchema = new mongoose.Schema(
-  {
-    _id: {
-      type: String,
-      required: true
-    },
-    seq: {
-      type: Number,
-      default: 0
-    }
-  },
-  {
-    versionKey: false
+export const Counter = {
+  async findOneAndUpdate(filter) {
+    const id = filter._id || filter.id;
+    return prisma.counter.upsert({
+      where: { id },
+      update: { seq: { increment: 1 } },
+      create: { id, seq: 1 }
+    });
   }
-);
-
-export const Counter = mongoose.models.Counter || mongoose.model('Counter', counterSchema);
+};
 
 /**
  * Generates an atomic, collision-safe complaint number.
  * Format: FIX-YYYYMM-XXXX (e.g., FIX-202610-0001)
- * Uses database-backed atomic $inc counter to prevent race conditions during concurrent requests.
+ * Backed by MySQL Counter table to prevent race conditions during concurrent requests.
  * @returns {Promise<string>}
  */
 export const getNextComplaintNumber = async () => {
@@ -30,16 +23,15 @@ export const getNextComplaintNumber = async () => {
   const counterId = `complaint_${yearMonth}`;
 
   try {
-    const counter = await Counter.findOneAndUpdate(
-      { _id: counterId },
-      { $inc: { seq: 1 } },
-      { new: true, upsert: true }
-    );
+    const counter = await prisma.counter.upsert({
+      where: { id: counterId },
+      update: { seq: { increment: 1 } },
+      create: { id: counterId, seq: 1 }
+    });
 
     const formattedSequence = String(counter.seq).padStart(4, '0');
     return `FIX-${yearMonth}-${formattedSequence}`;
   } catch (err) {
-    // Fallback collision-safe generator for standalone/mock environments
     const randomSuffix = Math.floor(1000 + Math.random() * 9000);
     const timestampSuffix = Date.now().toString().slice(-4);
     return `FIX-${yearMonth}-${timestampSuffix}${randomSuffix}`;

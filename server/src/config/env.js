@@ -27,8 +27,8 @@ const validateNodeEnv = (envStr) => {
   return value;
 };
 
-const resolveMongoUri = (uriStr, nodeEnv) => {
-  return uriStr || (nodeEnv === 'production' ? '' : 'mongodb://127.0.0.1:27017/fixflow_dev');
+const resolveDatabaseUrl = (urlStr, nodeEnv) => {
+  return urlStr || (nodeEnv === 'production' ? '' : 'mysql://root:@localhost:3306/fixflow');
 };
 
 const validateJwtSecret = (secret, nodeEnv) => {
@@ -42,7 +42,8 @@ const validateJwtExpiresIn = (expiresIn) => {
 export const env = Object.freeze({
   PORT: parsePort(process.env.PORT, 5000),
   NODE_ENV: validateNodeEnv(process.env.NODE_ENV),
-  MONGODB_URI: resolveMongoUri(process.env.MONGODB_URI, process.env.NODE_ENV || 'development'),
+  DATABASE_URL: resolveDatabaseUrl(process.env.DATABASE_URL, process.env.NODE_ENV || 'development'),
+  MONGODB_URI: process.env.MONGODB_URI || '',
   CLIENT_URL: process.env.CLIENT_URL || 'http://localhost:5173',
   JWT_SECRET: validateJwtSecret(process.env.JWT_SECRET, process.env.NODE_ENV || 'development'),
   JWT_EXPIRES_IN: validateJwtExpiresIn(process.env.JWT_EXPIRES_IN),

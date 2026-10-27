@@ -9,7 +9,8 @@
             "request": "launch",
             "name": "Launch Chrome against localhost",
             "url": "http://localhost:5173",
-            "webRoot": "${workspaceFolder}/client"
+            "webRoot": "${workspaceFolder}/client",
+            "preLaunchTask": "Start Client (Vite)"
         },
         {
             "type": "chrome",
@@ -18,6 +19,13 @@
             "url": "http://localhost:5173",
             "webRoot": "${workspaceFolder}/client",
             "preLaunchTask": "Start Client (Vite)"
+        },
+        {
+            "type": "chrome",
+            "request": "launch",
+            "name": "Launch Chrome (Existing Server)",
+            "url": "http://localhost:5173",
+            "webRoot": "${workspaceFolder}/client"
         },
         {
             "type": "node",

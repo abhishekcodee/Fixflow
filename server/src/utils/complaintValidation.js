@@ -11,7 +11,13 @@ import {
  * @returns {boolean}
  */
 export const isValidObjectId = (id) => {
-  return typeof id === 'string' && /^[0-9a-fA-F]{24}$/.test(id) && mongoose.Types.ObjectId.isValid(id);
+  if (typeof id !== 'string') return false;
+  const trimmed = id.trim();
+  return (
+    /^[0-9a-fA-F]{24}$/.test(trimmed) ||
+    /^[0-9a-fA-F-]{36}$/.test(trimmed) ||
+    /^[a-zA-Z0-9_-]{3,64}$/.test(trimmed)
+  );
 };
 
 /**

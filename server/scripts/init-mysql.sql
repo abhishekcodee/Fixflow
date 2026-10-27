@@ -1,0 +1,96 @@
+USE fixflow;
+
+CREATE TABLE IF NOT EXISTS User (
+  id VARCHAR(36) NOT NULL PRIMARY KEY,
+  name VARCHAR(60) NOT NULL,
+  email VARCHAR(191) NOT NULL UNIQUE,
+  passwordHash VARCHAR(255) NULL,
+  githubId VARCHAR(191) NULL UNIQUE,
+  avatarUrl TEXT NULL,
+  role VARCHAR(20) NOT NULL DEFAULT 'user',
+  isActive BOOLEAN NOT NULL DEFAULT TRUE,
+  isVerified BOOLEAN NOT NULL DEFAULT FALSE,
+  createdAt DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  updatedAt DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3),
+  INDEX idx_user_role (role)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS Complaint (
+  id VARCHAR(36) NOT NULL PRIMARY KEY,
+  complaintNumber VARCHAR(50) NOT NULL UNIQUE,
+  title VARCHAR(120) NOT NULL,
+  description TEXT NOT NULL,
+  category VARCHAR(50) NOT NULL,
+  priority VARCHAR(20) NOT NULL DEFAULT 'medium',
+  status VARCHAR(30) NOT NULL DEFAULT 'submitted',
+  building VARCHAR(60) NOT NULL,
+  floor VARCHAR(30) NOT NULL,
+  room VARCHAR(30) NOT NULL,
+  locationDescription VARCHAR(255) NULL,
+  latitude DOUBLE NULL,
+  longitude DOUBLE NULL,
+  address VARCHAR(255) NULL,
+  createdById VARCHAR(36) NOT NULL,
+  assignedToId VARCHAR(36) NULL,
+  assignedAt DATETIME(3) NULL,
+  resolutionNotes TEXT NULL,
+  resolvedAt DATETIME(3) NULL,
+  closedAt DATETIME(3) NULL,
+  feedbackRating INT NULL,
+  feedbackComments TEXT NULL,
+  feedbackSubmittedAt DATETIME(3) NULL,
+  createdAt DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  updatedAt DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3),
+  INDEX idx_complaint_created (createdById, createdAt),
+  INDEX idx_complaint_assigned (assignedToId, status),
+  INDEX idx_complaint_status_priority (status, priority, createdAt),
+  CONSTRAINT fk_complaint_creator FOREIGN KEY (createdById) REFERENCES User(id) ON DELETE CASCADE,
+  CONSTRAINT fk_complaint_technician FOREIGN KEY (assignedToId) REFERENCES User(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS ComplaintHistory (
+  id VARCHAR(36) NOT NULL PRIMARY KEY,
+  complaintId VARCHAR(36) NOT NULL,
+  actorId VARCHAR(36) NOT NULL,
+  action VARCHAR(50) NOT NULL,
+  previousState JSON NULL,
+  newState JSON NULL,
+  note TEXT NULL,
+  timestamp DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  INDEX idx_history_timeline (complaintId, timestamp),
+  CONSTRAINT fk_history_complaint FOREIGN KEY (complaintId) REFERENCES Complaint(id) ON DELETE CASCADE,
+  CONSTRAINT fk_history_actor FOREIGN KEY (actorId) REFERENCES User(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS EmailVerification (
+  id VARCHAR(36) NOT NULL PRIMARY KEY,
+  email VARCHAR(191) NOT NULL UNIQUE,
+  otpHash VARCHAR(255) NOT NULL,
+  pendingName VARCHAR(60) NOT NULL,
+  pendingPasswordHash VARCHAR(255) NOT NULL,
+  pendingRole VARCHAR(20) NOT NULL DEFAULT 'user',
+  attempts INT NOT NULL DEFAULT 0,
+  lastResendAt DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  expiresAt DATETIME(3) NOT NULL,
+  createdAt DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  updatedAt DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3),
+  INDEX idx_verification_expires (expiresAt)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS PasswordReset (
+  id VARCHAR(36) NOT NULL PRIMARY KEY,
+  email VARCHAR(191) NOT NULL,
+  tokenHash VARCHAR(255) NOT NULL,
+  attempts INT NOT NULL DEFAULT 0,
+  used BOOLEAN NOT NULL DEFAULT FALSE,
+  expiresAt DATETIME(3) NOT NULL,
+  createdAt DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  updatedAt DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3),
+  INDEX idx_reset_email (email),
+  INDEX idx_reset_expires (expiresAt)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS Counter (
+  id VARCHAR(50) NOT NULL PRIMARY KEY,
+  seq INT NOT NULL DEFAULT 0
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

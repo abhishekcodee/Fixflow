@@ -48,3 +48,7 @@ playwright-report/
 .DS_Store
 Thumbs.db
 ehthumbs.db
+
+# Scratch and Temporary Scripts
+scratch/
+
