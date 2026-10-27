@@ -28,6 +28,22 @@ const attachMethods = (raw) => {
       updatedAt: this.updatedAt
     };
   };
+  user.save = async function () {
+    const updated = await prisma.user.update({
+      where: { id: this.id },
+      data: {
+        name: this.name,
+        email: this.email,
+        githubId: this.githubId || null,
+        avatarUrl: this.avatarUrl || null,
+        role: this.role,
+        isActive: this.isActive,
+        isVerified: this.isVerified
+      }
+    });
+    Object.assign(this, attachMethods(updated));
+    return this;
+  };
   user.select = function () {
     return this;
   };
@@ -71,6 +87,16 @@ export class User {
     if (query.githubId) where.githubId = String(query.githubId);
     if (query.role) where.role = query.role;
     if (query.isActive !== undefined) where.isActive = query.isActive;
+
+    if (query.$or && Array.isArray(query.$or)) {
+      where.OR = query.$or.map((clause) => {
+        const c = {};
+        if (clause.id || clause._id) c.id = String(clause.id || clause._id);
+        if (clause.email) c.email = String(clause.email).trim().toLowerCase();
+        if (clause.githubId) c.githubId = String(clause.githubId);
+        return c;
+      });
+    }
 
     return new UserQueryBuilder(where);
   }

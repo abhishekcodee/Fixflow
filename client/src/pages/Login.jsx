@@ -17,7 +17,7 @@ export function Login() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [githubLoading, setGithubLoading] = useState(false);
 
-  const { login } = useAuth();
+  const { login, loginWithGithub } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const from = location.state?.from?.pathname || '/dashboard';
@@ -27,9 +27,23 @@ export function Login() {
     setGithubLoading(true);
     try {
       let clientId = import.meta.env.VITE_GITHUB_CLIENT_ID;
+      let isDevMode = false;
       if (!clientId) {
         const config = await authApi.getGithubConfig();
         clientId = config?.clientId;
+        isDevMode = Boolean(config?.isDevMode);
+      }
+
+      if (isDevMode || clientId === 'dev-github-client-id') {
+        const loggedUser = await loginWithGithub('dev-github-auth-code');
+        if (loggedUser?.role === 'technician') {
+          navigate('/technician', { replace: true });
+        } else if (loggedUser?.role === 'admin') {
+          navigate('/admin', { replace: true });
+        } else {
+          navigate(from, { replace: true });
+        }
+        return;
       }
 
       if (!clientId) {

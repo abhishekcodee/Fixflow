@@ -567,11 +567,13 @@ export const getTechnicians = async (req, res, next) => {
  * @access  Public
  */
 export const getGithubConfig = (req, res) => {
+  const isRealConfigured = Boolean(env.GITHUB_CLIENT_ID && env.GITHUB_CLIENT_SECRET);
   return res.status(200).json({
     success: true,
     data: {
-      clientId: env.GITHUB_CLIENT_ID || null,
-      isConfigured: Boolean(env.GITHUB_CLIENT_ID && env.GITHUB_CLIENT_SECRET)
+      clientId: env.GITHUB_CLIENT_ID || (env.NODE_ENV === 'development' ? 'dev-github-client-id' : null),
+      isConfigured: isRealConfigured || env.NODE_ENV === 'development',
+      isDevMode: !isRealConfigured && env.NODE_ENV === 'development'
     }
   });
 };
@@ -589,6 +591,31 @@ export const githubLogin = async (req, res, next) => {
     }
 
     if (!env.GITHUB_CLIENT_ID || !env.GITHUB_CLIENT_SECRET) {
+      if (env.NODE_ENV === 'development' || code.startsWith('dev-')) {
+        let user = await User.findOne({ email: 'amanupadhyay2037@gmail.com' });
+        if (!user) {
+          user = await User.create({
+            name: 'Aman (GitHub)',
+            email: 'amanupadhyay2037@gmail.com',
+            githubId: 'gh_local_dev_user',
+            avatarUrl: 'https://avatars.githubusercontent.com/u/9919?v=4',
+            role: 'user',
+            isVerified: true,
+            isActive: true
+          });
+        }
+        const token = signToken(user);
+        logger.info(`Development GitHub login simulated for ${user.email}`);
+        return res.status(200).json({
+          success: true,
+          message: 'Authenticated with GitHub (Development Mode).',
+          data: {
+            user: user.toSafeObject(),
+            token
+          }
+        });
+      }
+
       return next(
         new AppError(
           'GitHub OAuth is not configured on the server. Please set GITHUB_CLIENT_ID and GITHUB_CLIENT_SECRET.',

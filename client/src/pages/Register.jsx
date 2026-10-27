@@ -34,7 +34,7 @@ export function Register() {
   const [resendCooldown, setResendCooldown] = useState(60); // 60s cooldown
   const [remainingAttempts, setRemainingAttempts] = useState(null);
 
-  const { setSession } = useAuth();
+  const { setSession, loginWithGithub } = useAuth();
   const navigate = useNavigate();
   const otpInputRef = useRef(null);
 
@@ -43,9 +43,23 @@ export function Register() {
     setGithubLoading(true);
     try {
       let clientId = import.meta.env.VITE_GITHUB_CLIENT_ID;
+      let isDevMode = false;
       if (!clientId) {
         const config = await authApi.getGithubConfig();
         clientId = config?.clientId;
+        isDevMode = Boolean(config?.isDevMode);
+      }
+
+      if (isDevMode || clientId === 'dev-github-client-id') {
+        const loggedUser = await loginWithGithub('dev-github-auth-code');
+        if (loggedUser?.role === 'technician') {
+          navigate('/technician', { replace: true });
+        } else if (loggedUser?.role === 'admin') {
+          navigate('/admin', { replace: true });
+        } else {
+          navigate('/dashboard', { replace: true });
+        }
+        return;
       }
 
       if (!clientId) {
