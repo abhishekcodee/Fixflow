@@ -8,6 +8,8 @@
     "start": "node src/server.js",
     "dev": "nodemon src/server.js",
     "dev:watch": "node --watch src/server.js",
+    "prisma:generate": "prisma generate",
+    "postinstall": "prisma generate",
     "check": "node --check src/server.js src/app.js src/config/env.js src/config/database.js src/models/User.js src/models/Counter.js src/models/Complaint.js src/models/ComplaintHistory.js src/utils/validation.js src/utils/token.js src/utils/complaintValidation.js src/utils/AppError.js src/utils/logger.js src/middleware/auth.js src/middleware/errorHandler.js src/middleware/notFound.js src/controllers/authController.js src/controllers/complaintController.js src/routes/healthRoutes.js src/routes/authRoutes.js src/routes/complaintRoutes.js",
     "test": "node --test tests/**/*.test.js",
     "test:unit": "node --test tests/unit/**/*.test.js",

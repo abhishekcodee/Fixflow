@@ -13,8 +13,8 @@ services:
     runtime: node
     plan: free
     region: oregon
-    buildCommand: npm --prefix server install
-    startCommand: npm --prefix server start
+    buildCommand: npm install
+    startCommand: node server/src/server.js
     healthCheckPath: /api/v1/health
     envVars:
       - key: NODE_ENV
@@ -23,9 +23,9 @@ services:
         value: 5000
       - key: CLIENT_URL
         value: https://fixflow-71c7.onrender.com
-      # MongoDB Atlas connection string (required)
-      # e.g.: mongodb+srv://<username>:<password>@cluster0.mongodb.net/fixflow?retryWrites=true&w=majority
-      - key: MONGODB_URI
+      # MySQL Database connection string (Prisma)
+      # e.g.: mysql://user:password@host:port/database?sslaccept=strict
+      - key: DATABASE_URL
         sync: false
       # Automatically generated high-entropy 32-character secret for signing JWTs
       - key: JWT_SECRET
@@ -35,11 +35,6 @@ services:
       # Automatically seed default demo accounts (admin, technician, user) if database is newly created
       - key: ALLOW_SEED_ON_EMPTY
         value: "true"
-      # GitHub OAuth 2.0 Credentials (from GitHub Developer Settings -> OAuth Apps)
-      - key: GITHUB_CLIENT_ID
-        sync: false
-      - key: GITHUB_CLIENT_SECRET
-        sync: false
       # Gmail SMTP for Real Email OTP verification (Google App Password)
       - key: SMTP_HOST
         value: smtp.gmail.com

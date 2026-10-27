@@ -3,12 +3,28 @@
   "version": "1.0.0",
   "private": true,
   "type": "module",
+  "workspaces": [
+    "server",
+    "client"
+  ],
   "scripts": {
     "dev": "node scripts/dev.js",
     "dev:client": "npm --prefix client run dev",
     "dev:server": "npm --prefix server run dev",
     "build": "node scripts/build.js",
+    "postinstall": "npm --prefix server install",
     "test": "npm --prefix server test && npm --prefix client test",
     "start": "node server/src/server.js"
+  },
+  "dependencies": {
+    "@prisma/client": "^6.4.1",
+    "bcryptjs": "^3.0.3",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "helmet": "^8.0.0",
+    "jsonwebtoken": "^9.0.3",
+    "nodemailer": "^10.2.1",
+    "prisma": "^6.4.1"
   }
 }
