@@ -6,7 +6,6 @@ import { Input } from '../components/common/Input';
 import { Button } from '../components/common/Button';
 import { Card } from '../components/common/Card';
 import { ErrorState } from '../components/common/ErrorState';
-import { GitHubIcon } from '../components/common/Icons';
 import './Auth.css';
 
 export function Register() {
@@ -27,58 +26,15 @@ export function Register() {
   const [infoMessage, setInfoMessage] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isResending, setIsResending] = useState(false);
-  const [githubLoading, setGithubLoading] = useState(false);
 
   // Timers
   const [otpExpiresIn, setOtpExpiresIn] = useState(300); // 5 minutes (300s)
   const [resendCooldown, setResendCooldown] = useState(60); // 60s cooldown
   const [remainingAttempts, setRemainingAttempts] = useState(null);
 
-  const { setSession, loginWithGithub } = useAuth();
+  const { setSession } = useAuth();
   const navigate = useNavigate();
   const otpInputRef = useRef(null);
-
-  async function handleGitHubLogin() {
-    setFormError('');
-    setGithubLoading(true);
-    try {
-      let clientId = import.meta.env.VITE_GITHUB_CLIENT_ID;
-      let isDevMode = false;
-      if (!clientId) {
-        const config = await authApi.getGithubConfig();
-        clientId = config?.clientId;
-        isDevMode = Boolean(config?.isDevMode);
-      }
-
-      if (isDevMode || clientId === 'dev-github-client-id') {
-        const loggedUser = await loginWithGithub('dev-github-auth-code');
-        if (loggedUser?.role === 'technician') {
-          navigate('/technician', { replace: true });
-        } else if (loggedUser?.role === 'admin') {
-          navigate('/admin', { replace: true });
-        } else {
-          navigate('/dashboard', { replace: true });
-        }
-        return;
-      }
-
-      if (!clientId) {
-        throw new Error(
-          'GitHub Login is not configured on the server yet. Please add GITHUB_CLIENT_ID and GITHUB_CLIENT_SECRET in the server environment.'
-        );
-      }
-
-      const redirectUri = `${window.location.origin}/auth/github/callback`;
-      const githubUrl = `https://github.com/login/oauth/authorize?client_id=${clientId}&redirect_uri=${encodeURIComponent(
-        redirectUri
-      )}&scope=user:email`;
-
-      window.location.href = githubUrl;
-    } catch (err) {
-      setFormError(err.message || 'Unable to initiate GitHub sign in.');
-      setGithubLoading(false);
-    }
-  }
 
   // Password requirements checklist
   const hasMinLength = password.length >= 8;
@@ -306,23 +262,8 @@ export function Register() {
           )}
 
           {step === 1 ? (
-            <>
-              <button
-                type="button"
-                className="auth-github-btn"
-                onClick={handleGitHubLogin}
-                disabled={githubLoading}
-              >
-                <GitHubIcon size={20} />
-                <span>{githubLoading ? 'Connecting to GitHub...' : 'Continue with GitHub'}</span>
-              </button>
-
-              <div className="auth-oauth-divider">
-                <span>or register with email</span>
-              </div>
-
-              {/* STEP 1: Registration Form */}
-              <form onSubmit={handleSendOtp} noValidate>
+            /* STEP 1: Registration Form */
+            <form onSubmit={handleSendOtp} noValidate>
               {/* Account Role Selection: Resident/User or Technician */}
               <div className="auth-role-group">
                 <label className="input-label" htmlFor="register-role">
@@ -479,7 +420,6 @@ export function Register() {
                 Send Verification Code
               </Button>
             </form>
-            </>
           ) : (
             /* STEP 2: OTP Verification Form */
             <form onSubmit={handleVerifyOtp} noValidate>

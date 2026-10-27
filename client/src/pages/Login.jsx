@@ -5,8 +5,6 @@ import { Input } from '../components/common/Input';
 import { Button } from '../components/common/Button';
 import { Card } from '../components/common/Card';
 import { ErrorState } from '../components/common/ErrorState';
-import { GitHubIcon } from '../components/common/Icons';
-import { authApi } from '../services/api';
 import './Auth.css';
 
 export function Login() {
@@ -15,54 +13,11 @@ export function Login() {
   const [formError, setFormError] = useState('');
   const [fieldErrors, setFieldErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [githubLoading, setGithubLoading] = useState(false);
 
-  const { login, loginWithGithub } = useAuth();
+  const { login } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const from = location.state?.from?.pathname || '/dashboard';
-
-  async function handleGitHubLogin() {
-    setFormError('');
-    setGithubLoading(true);
-    try {
-      let clientId = import.meta.env.VITE_GITHUB_CLIENT_ID;
-      let isDevMode = false;
-      if (!clientId) {
-        const config = await authApi.getGithubConfig();
-        clientId = config?.clientId;
-        isDevMode = Boolean(config?.isDevMode);
-      }
-
-      if (isDevMode || clientId === 'dev-github-client-id') {
-        const loggedUser = await loginWithGithub('dev-github-auth-code');
-        if (loggedUser?.role === 'technician') {
-          navigate('/technician', { replace: true });
-        } else if (loggedUser?.role === 'admin') {
-          navigate('/admin', { replace: true });
-        } else {
-          navigate(from, { replace: true });
-        }
-        return;
-      }
-
-      if (!clientId) {
-        throw new Error(
-          'GitHub Login is not configured on the server yet. Please add GITHUB_CLIENT_ID and GITHUB_CLIENT_SECRET in the server environment.'
-        );
-      }
-
-      const redirectUri = `${window.location.origin}/auth/github/callback`;
-      const githubUrl = `https://github.com/login/oauth/authorize?client_id=${clientId}&redirect_uri=${encodeURIComponent(
-        redirectUri
-      )}&scope=user:email`;
-
-      window.location.href = githubUrl;
-    } catch (err) {
-      setFormError(err.message || 'Unable to initiate GitHub sign in.');
-      setGithubLoading(false);
-    }
-  }
 
   function validate() {
     const errors = {};
@@ -121,20 +76,6 @@ export function Login() {
               <ErrorState title="Authentication Failed" message={formError} />
             </div>
           )}
-
-          <button
-            type="button"
-            className="auth-github-btn"
-            onClick={handleGitHubLogin}
-            disabled={githubLoading}
-          >
-            <GitHubIcon size={20} />
-            <span>{githubLoading ? 'Connecting to GitHub...' : 'Continue with GitHub'}</span>
-          </button>
-
-          <div className="auth-oauth-divider">
-            <span>or sign in with email</span>
-          </div>
 
           <form onSubmit={handleSubmit} noValidate>
             <Input
@@ -195,3 +136,5 @@ export function Login() {
     </div>
   );
 }
+
+export default Login;
