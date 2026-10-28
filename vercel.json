@@ -4,8 +4,8 @@
   "outputDirectory": "dist",
   "rewrites": [
     {
-      "source": "/api/(.*)",
-      "destination": "https://fixflowwww.onrender.com/api/$1"
+      "source": "/api/:path*",
+      "destination": "https://fixflowwww.onrender.com/api/:path*"
     },
     {
       "source": "/(.*)",
