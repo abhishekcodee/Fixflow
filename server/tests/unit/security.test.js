@@ -78,6 +78,43 @@ describe('Security & Cryptography Unit Tests', () => {
       assert.ok(decoded.exp > decoded.iat);
     });
 
+    it('should sign a token containing canonical UUID id and role', () => {
+      const mockUser = {
+        id: '123e4567-e89b-12d3-a456-426614174000',
+        role: 'technician'
+      };
+
+      const token = signToken(mockUser);
+      const decoded = verifyToken(token);
+      assert.strictEqual(decoded.id, '123e4567-e89b-12d3-a456-426614174000');
+      assert.strictEqual(decoded.role, 'technician');
+    });
+
+    it('should reject signing if user object is null or undefined', () => {
+      assert.throws(
+        () => signToken(null),
+        { name: 'TypeError', message: 'Cannot sign JWT: user object is required.' }
+      );
+      assert.throws(
+        () => signToken(undefined),
+        { name: 'TypeError', message: 'Cannot sign JWT: user object is required.' }
+      );
+    });
+
+    it('should reject signing if user.id and user._id are both missing', () => {
+      assert.throws(
+        () => signToken({ role: 'user' }),
+        { name: 'TypeError', message: 'Cannot sign JWT: user.id or user._id is missing.' }
+      );
+    });
+
+    it('should reject signing if user.role is missing', () => {
+      assert.throws(
+        () => signToken({ id: 'some-id' }),
+        { name: 'TypeError', message: 'Cannot sign JWT: user.role is missing.' }
+      );
+    });
+
     it('should reject tampered or malformed tokens', () => {
       const mockUser = { _id: '12345', role: 'user' };
       const validToken = signToken(mockUser);

@@ -12,6 +12,14 @@ import {
   validateFeedbackInput
 } from '../utils/complaintValidation.js';
 
+const extractId = (val) => {
+  if (!val) return null;
+  if (typeof val === 'string') return val;
+  if (val.id) return String(val.id);
+  if (val._id) return String(val._id);
+  return String(val);
+};
+
 /**
  * @route   POST /api/v1/complaints
  * @desc    Log a new maintenance complaint
@@ -99,7 +107,7 @@ export const createComplaint = async (req, res, next) => {
       success: true,
       message: 'Complaint submitted successfully.',
       data: {
-        complaint: newComplaint.toSafeObject()
+        complaint: newComplaint.toSafeObject ? newComplaint.toSafeObject() : newComplaint
       }
     });
   } catch (err) {
@@ -183,8 +191,8 @@ export const getComplaintById = async (req, res, next) => {
     }
 
     // Role-based authorization check
-    const creatorId = complaint.createdBy?._id?.toString() || complaint.createdBy?.toString();
-    const assignedId = complaint.assignedTo?._id?.toString() || complaint.assignedTo?.toString();
+    const creatorId = extractId(complaint.createdBy);
+    const assignedId = extractId(complaint.assignedTo);
 
     const isCreator = creatorId === req.user.id;
     const isAssigned = assignedId === req.user.id;
@@ -224,7 +232,7 @@ export const updateComplaint = async (req, res, next) => {
       return next(new AppError('Complaint not found.', 404, 'COMPLAINT_NOT_FOUND'));
     }
 
-    const creatorId = complaint.createdBy.toString();
+    const creatorId = extractId(complaint.createdBy);
     const isCreator = creatorId === req.user.id;
     const isAdmin = req.user.role === 'admin';
 
@@ -318,7 +326,7 @@ export const assignTechnician = async (req, res, next) => {
       );
     }
 
-    const previousAssigned = complaint.assignedTo ? complaint.assignedTo.toString() : null;
+    const previousAssigned = extractId(complaint.assignedTo);
     const previousStatus = complaint.status;
 
     complaint.assignedTo = technician._id;
@@ -376,8 +384,8 @@ export const updateComplaintStatus = async (req, res, next) => {
       return next(new AppError('Complaint not found.', 404, 'COMPLAINT_NOT_FOUND'));
     }
 
-    const creatorId = complaint.createdBy.toString();
-    const assignedId = complaint.assignedTo ? complaint.assignedTo.toString() : null;
+    const creatorId = extractId(complaint.createdBy);
+    const assignedId = extractId(complaint.assignedTo);
 
     const isCreator = creatorId === req.user.id;
     const isAssignedTechnician = assignedId === req.user.id;
@@ -451,8 +459,8 @@ export const getComplaintHistory = async (req, res, next) => {
       return next(new AppError('Complaint not found.', 404, 'COMPLAINT_NOT_FOUND'));
     }
 
-    const creatorId = complaint.createdBy.toString();
-    const assignedId = complaint.assignedTo ? complaint.assignedTo.toString() : null;
+    const creatorId = extractId(complaint.createdBy);
+    const assignedId = extractId(complaint.assignedTo);
 
     const isCreator = creatorId === req.user.id;
     const isAssigned = assignedId === req.user.id;
@@ -499,7 +507,8 @@ export const submitFeedback = async (req, res, next) => {
     }
 
     // Only the complaint creator can submit feedback
-    if (complaint.createdBy.toString() !== req.user.id) {
+    const creatorId = extractId(complaint.createdBy);
+    if (creatorId !== req.user.id) {
       return next(
         new AppError('Forbidden: only the ticket creator can submit feedback.', 403, 'FORBIDDEN')
       );
@@ -570,4 +579,3 @@ export default {
   getComplaintHistory,
   submitFeedback
 };
-

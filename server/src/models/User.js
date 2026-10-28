@@ -6,13 +6,19 @@ export const ALLOWED_ROLES = ['user', 'admin', 'technician'];
 const attachMethods = (raw) => {
   if (!raw) return null;
   const user = { ...raw };
-  user._id = user.id; // Backward compatibility with MongoDB _id
+
+  const resolvedId = raw.id || raw._id;
+  const idStr = resolvedId ? String(resolvedId) : undefined;
+  user.id = idStr;
+  user._id = idStr; // Backward compatibility with MongoDB _id
+
   user.comparePassword = async function (candidatePassword) {
     if (!this.passwordHash) {
       throw new Error('Password hash not loaded in user document.');
     }
     return bcrypt.compare(candidatePassword, this.passwordHash);
   };
+
   user.toSafeObject = function () {
     return {
       id: this.id,
@@ -28,12 +34,21 @@ const attachMethods = (raw) => {
       updatedAt: this.updatedAt
     };
   };
+
+  user.toJSON = function () {
+    return this.toSafeObject();
+  };
+
   user.save = async function () {
+    if (!this.id) {
+      return this;
+    }
     const updated = await prisma.user.update({
       where: { id: this.id },
       data: {
         name: this.name,
-        email: this.email,
+        email: this.email ? this.email.toLowerCase().trim() : undefined,
+        passwordHash: this.passwordHash || undefined,
         githubId: this.githubId || null,
         avatarUrl: this.avatarUrl || null,
         role: this.role,
@@ -44,9 +59,11 @@ const attachMethods = (raw) => {
     Object.assign(this, attachMethods(updated));
     return this;
   };
+
   user.select = function () {
     return this;
   };
+
   return user;
 };
 
@@ -122,17 +139,25 @@ export class User {
   }
 
   static async create(data) {
+    const createData = {
+      name: data.name,
+      email: data.email.toLowerCase().trim(),
+      passwordHash: data.passwordHash || null,
+      githubId: data.githubId || null,
+      avatarUrl: data.avatarUrl || null,
+      role: data.role || 'user',
+      isActive: data.isActive !== undefined ? data.isActive : true,
+      isVerified: data.isVerified !== undefined ? data.isVerified : false
+    };
+
+    if (data.id) {
+      createData.id = String(data.id);
+    } else if (data._id) {
+      createData.id = String(data._id);
+    }
+
     const created = await prisma.user.create({
-      data: {
-        name: data.name,
-        email: data.email.toLowerCase().trim(),
-        passwordHash: data.passwordHash || null,
-        githubId: data.githubId || null,
-        avatarUrl: data.avatarUrl || null,
-        role: data.role || 'user',
-        isActive: data.isActive !== undefined ? data.isActive : true,
-        isVerified: data.isVerified !== undefined ? data.isVerified : false
-      }
+      data: createData
     });
     return attachMethods(created);
   }
@@ -150,14 +175,79 @@ export class User {
     return attachMethods(updated);
   }
 
+  static async deleteMany(filter = {}) {
+    let where = {};
+    if (filter.email) {
+      if (typeof filter.email === 'object' && filter.email.$in && Array.isArray(filter.email.$in)) {
+        where.email = { in: filter.email.$in.map((e) => String(e).trim().toLowerCase()) };
+      } else {
+        where.email = String(filter.email).trim().toLowerCase();
+      }
+    }
+    if (filter.role) where.role = filter.role;
+    if (filter.id) {
+      if (typeof filter.id === 'object' && filter.id.$in) {
+        where.id = { in: filter.id.$in.map(String) };
+      } else {
+        where.id = String(filter.id);
+      }
+    }
+    if (filter._id) {
+      if (typeof filter._id === 'object' && filter._id.$in) {
+        where.id = { in: filter._id.$in.map(String) };
+      } else {
+        where.id = String(filter._id);
+      }
+    }
+
+    try {
+      const res = await prisma.user.deleteMany({ where });
+      return { deletedCount: res.count };
+    } catch {
+      return { deletedCount: 0 };
+    }
+  }
+
+  static async deleteOne(filter = {}) {
+    let where = {};
+    if (filter.email) where.email = String(filter.email).trim().toLowerCase();
+    if (filter.id || filter._id) where.id = String(filter.id || filter._id);
+    try {
+      await prisma.user.delete({ where });
+      return { deletedCount: 1 };
+    } catch {
+      return { deletedCount: 0 };
+    }
+  }
+
   static async countDocuments(query = {}) {
     let where = {};
     if (query.role) where.role = query.role;
     return prisma.user.count({ where });
   }
 
-  constructor(data) {
+  constructor(data = {}) {
     Object.assign(this, attachMethods(data));
+  }
+
+  toSafeObject() {
+    return {
+      id: this.id,
+      _id: this.id,
+      name: this.name,
+      email: this.email,
+      role: this.role,
+      avatarUrl: this.avatarUrl || null,
+      githubId: this.githubId || null,
+      isActive: this.isActive,
+      isVerified: this.isVerified,
+      createdAt: this.createdAt,
+      updatedAt: this.updatedAt
+    };
+  }
+
+  toJSON() {
+    return this.toSafeObject();
   }
 }
 

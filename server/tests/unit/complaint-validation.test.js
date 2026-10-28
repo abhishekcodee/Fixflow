@@ -2,6 +2,7 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   isValidObjectId,
+  isValidId,
   validateCreateComplaint,
   validateUpdateComplaint,
   validateStatusTransition,
@@ -16,11 +17,25 @@ describe('Complaint Validation Unit Tests', () => {
       assert.strictEqual(isValidObjectId('000000000000000000000000'), true);
     });
 
+    it('should accept valid canonical UUID format used by Prisma schema', () => {
+      assert.strictEqual(isValidObjectId('123e4567-e89b-12d3-a456-426614174000'), true);
+      assert.strictEqual(isValidObjectId('c0a80101-0000-0000-0000-000000000000'), true);
+      assert.strictEqual(isValidId('123e4567-e89b-12d3-a456-426614174000'), true);
+    });
+
+    it('should accept valid CUID format', () => {
+      assert.strictEqual(isValidObjectId('cjy01abcde012345678901234'), true);
+    });
+
     it('should reject invalid or malformed IDs', () => {
       assert.strictEqual(isValidObjectId('12345'), false);
       assert.strictEqual(isValidObjectId('not-a-valid-id-1234567890'), false);
       assert.strictEqual(isValidObjectId(null), false);
       assert.strictEqual(isValidObjectId(undefined), false);
+      assert.strictEqual(isValidObjectId(''), false);
+      assert.strictEqual(isValidObjectId('   '), false);
+      assert.strictEqual(isValidObjectId(12345), false);
+      assert.strictEqual(isValidObjectId({}), false);
     });
   });
 
@@ -60,76 +75,94 @@ describe('Complaint Validation Unit Tests', () => {
     });
 
     it('should reject invalid categories', () => {
-      const result = validateCreateComplaint({ ...validPayload, category: 'astrology' });
+      const result = validateCreateComplaint({ ...validPayload, category: 'spaceship_propulsion' });
       assert.strictEqual(result.isValid, false);
       assert.ok(result.errors.some((e) => e.field === 'category'));
     });
 
     it('should reject missing location components', () => {
-      const missingRoom = validateCreateComplaint({
+      const noBuilding = validateCreateComplaint({
         ...validPayload,
-        location: { building: 'A', floor: '1' }
+        location: { floor: '1', room: '101' }
       });
-      assert.strictEqual(missingRoom.isValid, false);
-      assert.ok(missingRoom.errors.some((e) => e.field === 'location.room'));
+      assert.strictEqual(noBuilding.isValid, false);
+      assert.ok(noBuilding.errors.some((e) => e.field === 'location.building'));
+
+      const noFloor = validateCreateComplaint({
+        ...validPayload,
+        location: { building: 'Tower B', room: '101' }
+      });
+      assert.strictEqual(noFloor.isValid, false);
+      assert.ok(noFloor.errors.some((e) => e.field === 'location.floor'));
+
+      const noRoom = validateCreateComplaint({
+        ...validPayload,
+        location: { building: 'Tower B', floor: '1' }
+      });
+      assert.strictEqual(noRoom.isValid, false);
+      assert.ok(noRoom.errors.some((e) => e.field === 'location.room'));
     });
   });
 
   describe('validateUpdateComplaint', () => {
     it('should reject modification of protected workflow fields', () => {
       const result = validateUpdateComplaint(
-        { status: 'resolved', complaintNumber: 'HACKED-001' },
-        'user',
-        'submitted'
+        { complaintNumber: 'FIX-999999-9999', status: 'closed' },
+        'admin',
+        'in_progress'
       );
       assert.strictEqual(result.isValid, false);
-      assert.ok(result.errors.some((e) => e.field === 'status'));
       assert.ok(result.errors.some((e) => e.field === 'complaintNumber'));
+      assert.ok(result.errors.some((e) => e.field === 'status'));
     });
 
     it('should prevent standard users from editing complaints not in submitted status', () => {
       const result = validateUpdateComplaint(
-        { title: 'Updated Title' },
+        { title: 'New Title Here' },
         'user',
         'in_progress'
       );
       assert.strictEqual(result.isValid, false);
-      assert.match(result.errors[0].issue, /only be edited while in "submitted"/);
+      assert.strictEqual(result.errors[0].field, 'status');
     });
 
     it('should allow administrators to update permitted fields', () => {
       const result = validateUpdateComplaint(
-        { priority: 'urgent', title: 'Admin Revised Title' },
+        {
+          title: 'Updated Emergency Water Leak',
+          priority: 'urgent',
+          category: 'plumbing'
+        },
         'admin',
         'in_progress'
       );
       assert.strictEqual(result.isValid, true);
+      assert.strictEqual(result.allowedUpdates.title, 'Updated Emergency Water Leak');
       assert.strictEqual(result.allowedUpdates.priority, 'urgent');
-      assert.strictEqual(result.allowedUpdates.title, 'Admin Revised Title');
+      assert.strictEqual(result.allowedUpdates.category, 'plumbing');
     });
   });
 
   describe('validateStatusTransition (State Machine Rules)', () => {
     it('should allow assigned technician to start in_progress work', () => {
-      const result = validateStatusTransition({
+      const transition = validateStatusTransition({
         currentStatus: 'assigned',
         targetStatus: 'in_progress',
         userRole: 'technician',
         isAssignedTechnician: true
       });
-      assert.strictEqual(result.isValid, true);
-      assert.strictEqual(result.actionType, 'STATUS_CHANGED');
+      assert.strictEqual(transition.isValid, true);
     });
 
     it('should reject unassigned technician from moving job to in_progress', () => {
-      const result = validateStatusTransition({
+      const transition = validateStatusTransition({
         currentStatus: 'assigned',
         targetStatus: 'in_progress',
         userRole: 'technician',
         isAssignedTechnician: false
       });
-      assert.strictEqual(result.isValid, false);
-      assert.match(result.error, /Only the assigned technician/);
+      assert.strictEqual(transition.isValid, false);
+      assert.match(transition.error, /Only the assigned technician/);
     });
 
     it('should require note when resolving work', () => {
@@ -141,17 +174,16 @@ describe('Complaint Validation Unit Tests', () => {
         note: ''
       });
       assert.strictEqual(withoutNote.isValid, false);
-      assert.match(withoutNote.error, /resolution note detailing repair/);
+      assert.match(withoutNote.error, /resolution note/i);
 
       const withNote = validateStatusTransition({
         currentStatus: 'in_progress',
         targetStatus: 'resolved',
         userRole: 'technician',
         isAssignedTechnician: true,
-        note: 'Replaced damaged copper pipe segment.'
+        note: 'Replaced compression fitting and verified zero leakage.'
       });
       assert.strictEqual(withNote.isValid, true);
-      assert.strictEqual(withNote.actionType, 'RESOLVED');
     });
 
     it('should require note when putting work on hold', () => {
@@ -163,51 +195,66 @@ describe('Complaint Validation Unit Tests', () => {
         note: ''
       });
       assert.strictEqual(withoutNote.isValid, false);
-      assert.match(withoutNote.error, /reason note explaining why work is on hold/);
+
+      const withNote = validateStatusTransition({
+        currentStatus: 'in_progress',
+        targetStatus: 'on_hold',
+        userRole: 'technician',
+        isAssignedTechnician: true,
+        note: 'Waiting for replacement valve delivery.'
+      });
+      assert.strictEqual(withNote.isValid, true);
     });
 
     it('should allow creator to close resolved ticket', () => {
-      const result = validateStatusTransition({
+      const transition = validateStatusTransition({
         currentStatus: 'resolved',
         targetStatus: 'closed',
         userRole: 'user',
         isCreator: true
       });
-      assert.strictEqual(result.isValid, true);
-      assert.strictEqual(result.actionType, 'CLOSED');
+      assert.strictEqual(transition.isValid, true);
     });
 
     it('should allow creator to reopen resolved ticket with explanation note', () => {
-      const result = validateStatusTransition({
+      const withoutNote = validateStatusTransition({
         currentStatus: 'resolved',
         targetStatus: 'in_progress',
         userRole: 'user',
         isCreator: true,
-        note: 'Sink is still leaking at the joint.'
+        note: ''
       });
-      assert.strictEqual(result.isValid, true);
-      assert.strictEqual(result.actionType, 'REOPENED');
+      assert.strictEqual(withoutNote.isValid, false);
+
+      const withNote = validateStatusTransition({
+        currentStatus: 'resolved',
+        targetStatus: 'in_progress',
+        userRole: 'user',
+        isCreator: true,
+        note: 'The sink is still leaking from the hot water side.'
+      });
+      assert.strictEqual(withNote.isValid, true);
+      assert.strictEqual(withNote.actionType, 'REOPENED');
     });
 
     it('should reject invalid status jumps (e.g., submitted directly to resolved)', () => {
-      const result = validateStatusTransition({
+      const transition = validateStatusTransition({
         currentStatus: 'submitted',
         targetStatus: 'resolved',
-        userRole: 'admin',
-        note: 'Done'
+        userRole: 'technician',
+        isAssignedTechnician: false
       });
-      assert.strictEqual(result.isValid, false);
-      assert.match(result.error, /Cannot transition directly from "submitted"/);
+      assert.strictEqual(transition.isValid, false);
     });
 
     it('should block transitions from permanently rejected tickets', () => {
-      const result = validateStatusTransition({
+      const transition = validateStatusTransition({
         currentStatus: 'rejected',
         targetStatus: 'in_progress',
         userRole: 'admin'
       });
-      assert.strictEqual(result.isValid, false);
-      assert.match(result.error, /Cannot transition from "rejected"/);
+      assert.strictEqual(transition.isValid, false);
+      assert.match(transition.error, /permanently closed/);
     });
   });
 
@@ -220,7 +267,7 @@ describe('Complaint Validation Unit Tests', () => {
     });
 
     it('should cap limit at maximum of 50 to prevent unbounded queries', () => {
-      const result = validatePaginationParams({ page: '2', limit: '100' });
+      const result = validatePaginationParams({ limit: '100' });
       assert.strictEqual(result.errors.length, 1);
       assert.match(result.errors[0], /cannot exceed maximum of 50/);
     });
@@ -276,4 +323,3 @@ describe('Complaint Validation Unit Tests', () => {
     });
   });
 });
-

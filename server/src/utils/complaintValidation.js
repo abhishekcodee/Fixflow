@@ -5,20 +5,32 @@ import {
   COMPLAINT_STATUSES
 } from '../models/Complaint.js';
 
+const UUID_REGEX = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/;
+const OBJECT_ID_REGEX = /^[0-9a-fA-F]{24}$/;
+const CUID_REGEX = /^c[a-z0-9]{24}$/;
+
 /**
- * Validates MongoDB ObjectId string representation.
+ * Validates identifier format supported by FixFlow:
+ * - 36-character canonical UUID (used by Prisma MySQL schema)
+ * - 24-character hexadecimal MongoDB ObjectId (legacy & test fixtures)
+ * - 25-character CUID (Prisma alternative)
+ * Correctly rejects malformed, empty, null, undefined, and non-identifier inputs.
  * @param {string} id
  * @returns {boolean}
  */
 export const isValidObjectId = (id) => {
-  if (typeof id !== 'string') return false;
+  if (!id || typeof id !== 'string') return false;
   const trimmed = id.trim();
+  if (!trimmed) return false;
+
   return (
-    /^[0-9a-fA-F]{24}$/.test(trimmed) ||
-    /^[0-9a-fA-F-]{36}$/.test(trimmed) ||
-    /^[a-zA-Z0-9_-]{3,64}$/.test(trimmed)
+    OBJECT_ID_REGEX.test(trimmed) ||
+    UUID_REGEX.test(trimmed) ||
+    CUID_REGEX.test(trimmed)
   );
 };
+
+export const isValidId = isValidObjectId;
 
 /**
  * Validates payload for creating a new complaint.
@@ -440,10 +452,10 @@ export const validateFeedbackInput = (payload = {}) => {
 
 export default {
   isValidObjectId,
+  isValidId,
   validateCreateComplaint,
   validateUpdateComplaint,
   validateStatusTransition,
   validatePaginationParams,
   validateFeedbackInput
 };
-

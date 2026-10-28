@@ -2,11 +2,11 @@ import prisma from '../config/prisma.js';
 
 export const Counter = {
   async findOneAndUpdate(filter) {
-    const id = filter._id || filter.id;
+    const id = filter.id || filter._id;
     return prisma.counter.upsert({
-      where: { id },
+      where: { id: String(id) },
       update: { seq: { increment: 1 } },
-      create: { id, seq: 1 }
+      create: { id: String(id), seq: 1 }
     });
   }
 };
@@ -23,12 +23,7 @@ export const getNextComplaintNumber = async () => {
   const counterId = `complaint_${yearMonth}`;
 
   try {
-    const counter = await prisma.counter.upsert({
-      where: { id: counterId },
-      update: { seq: { increment: 1 } },
-      create: { id: counterId, seq: 1 }
-    });
-
+    const counter = await Counter.findOneAndUpdate({ id: counterId, _id: counterId });
     const formattedSequence = String(counter.seq).padStart(4, '0');
     return `FIX-${yearMonth}-${formattedSequence}`;
   } catch (err) {

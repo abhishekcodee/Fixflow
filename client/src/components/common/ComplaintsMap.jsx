@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState, useMemo } from 'react';
-import { Link } from 'react-router-dom';
 import L from 'leaflet';
 import { RefreshIcon } from './Icons';
 import { Button } from './Button';

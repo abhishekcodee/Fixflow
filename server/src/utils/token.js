@@ -1,3 +1,4 @@
+import crypto from 'crypto';
 import jwt from 'jsonwebtoken';
 import { env } from '../config/env.js';
 
@@ -14,9 +15,26 @@ const getJwtSecret = () => {
  * @returns {string} Signed JWT
  */
 export const signToken = (user) => {
+  if (!user) {
+    throw new TypeError('Cannot sign JWT: user object is required.');
+  }
+
+  const rawId = user.id !== undefined && user.id !== null ? user.id : user._id;
+  if (!rawId) {
+    throw new TypeError('Cannot sign JWT: user.id or user._id is missing.');
+  }
+
+  if (!user.role) {
+    throw new TypeError('Cannot sign JWT: user.role is missing.');
+  }
+
+  const id = typeof rawId === 'object' && typeof rawId.toString === 'function'
+    ? rawId.toString()
+    : String(rawId);
+
   const secret = getJwtSecret();
   const payload = {
-    id: user.id || user._id.toString(),
+    id,
     role: user.role
   };
 
@@ -34,8 +52,6 @@ export const verifyToken = (token) => {
   const secret = getJwtSecret();
   return jwt.verify(token, secret);
 };
-
-import crypto from 'crypto';
 
 /**
  * Generates a cryptographically secure random numeric OTP.
