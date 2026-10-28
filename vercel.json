@@ -1,4 +1,5 @@
 {
+  "installCommand": "npm install --include=optional",
   "buildCommand": "node scripts/build.js",
   "outputDirectory": "dist",
   "rewrites": [

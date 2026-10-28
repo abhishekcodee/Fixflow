@@ -13,7 +13,7 @@ try {
 }
 
 console.log('3. Installing client dependencies...');
-execSync('npm --prefix client install', { stdio: 'inherit' });
+execSync('npm --prefix client install --include=optional', { stdio: 'inherit' });
 
 console.log('4. Building client Vite production bundle...');
 execSync('npm --prefix client run build', { stdio: 'inherit' });
@@ -27,4 +27,3 @@ if (fs.existsSync('client/dist')) {
 }
 
 console.log('✓ FixFlow production build ready at root dist directory.');
-
