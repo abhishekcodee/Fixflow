@@ -12,6 +12,15 @@ try {
   console.warn('Prisma generate warning (continuing build):', err.message);
 }
 
+if (process.env.DATABASE_URL) {
+  console.log('2.1 Synchronizing Prisma database schema...');
+  try {
+    execSync('npx prisma db push --schema=server/prisma/schema.prisma --accept-data-loss', { stdio: 'inherit' });
+  } catch (err) {
+    console.warn('Prisma db push note (continuing build):', err.message);
+  }
+}
+
 console.log('3. Installing client dependencies...');
 execSync('npm --prefix client install --include=optional', { stdio: 'inherit' });
 
