@@ -20,13 +20,13 @@ const formatHistory = (h) => {
     complaintId: h.complaintId,
     actor: h.actor
       ? {
-          id: h.actor.id,
-          _id: h.actor.id,
-          name: h.actor.name,
-          email: h.actor.email,
-          role: h.actor.role,
-          avatarUrl: h.actor.avatarUrl || null
-        }
+        id: h.actor.id,
+        _id: h.actor.id,
+        name: h.actor.name,
+        email: h.actor.email,
+        role: h.actor.role,
+        avatarUrl: h.actor.avatarUrl || null
+      }
       : h.actorId,
     action: h.action,
     previousState: h.previousState,

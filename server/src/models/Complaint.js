@@ -41,36 +41,36 @@ const formatComplaint = (c) => {
 
   obj.feedback = c.feedbackRating
     ? {
-        rating: c.feedbackRating,
-        comments: c.feedbackComments || '',
-        submittedAt: c.feedbackSubmittedAt
-      }
+      rating: c.feedbackRating,
+      comments: c.feedbackComments || '',
+      submittedAt: c.feedbackSubmittedAt
+    }
     : (c.feedback || null);
 
   obj.createdBy = c.createdBy
     ? (typeof c.createdBy === 'object' && (c.createdBy.id || c.createdBy._id)
-        ? {
-            id: String(c.createdBy.id || c.createdBy._id),
-            _id: String(c.createdBy._id || c.createdBy.id),
-            name: c.createdBy.name,
-            email: c.createdBy.email,
-            role: c.createdBy.role,
-            avatarUrl: c.createdBy.avatarUrl || null
-          }
-        : c.createdBy)
+      ? {
+        id: String(c.createdBy.id || c.createdBy._id),
+        _id: String(c.createdBy._id || c.createdBy.id),
+        name: c.createdBy.name,
+        email: c.createdBy.email,
+        role: c.createdBy.role,
+        avatarUrl: c.createdBy.avatarUrl || null
+      }
+      : c.createdBy)
     : (c.createdById || null);
 
   obj.assignedTo = c.assignedTo
     ? (typeof c.assignedTo === 'object' && (c.assignedTo.id || c.assignedTo._id)
-        ? {
-            id: String(c.assignedTo.id || c.assignedTo._id),
-            _id: String(c.assignedTo._id || c.assignedTo.id),
-            name: c.assignedTo.name,
-            email: c.assignedTo.email,
-            role: c.assignedTo.role,
-            avatarUrl: c.assignedTo.avatarUrl || null
-          }
-        : c.assignedTo)
+      ? {
+        id: String(c.assignedTo.id || c.assignedTo._id),
+        _id: String(c.assignedTo._id || c.assignedTo.id),
+        name: c.assignedTo.name,
+        email: c.assignedTo.email,
+        role: c.assignedTo.role,
+        avatarUrl: c.assignedTo.avatarUrl || null
+      }
+      : c.assignedTo)
     : (c.assignedToId || null);
 
   obj.toSafeObject = function () {
