@@ -22,7 +22,7 @@ services:
       - key: PORT
         value: 5000
       - key: CLIENT_URL
-        value: https://fixflow-71c7.onrender.com
+        value: https://fixflow-eosin.vercel.app,https://fixflowwww.onrender.com
       # MySQL Database connection string (Prisma)
       # e.g.: mysql://user:password@host:port/database?sslaccept=strict
       - key: DATABASE_URL
