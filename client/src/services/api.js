@@ -66,6 +66,8 @@ export async function request(endpoint, options = {}) {
     if (!message) {
       if (response.status === 404) {
         message = `API endpoint not found (404) at ${url}. Please verify that the backend API is deployed and VITE_API_BASE_URL is configured correctly.`;
+      } else if (response.status === 405) {
+        message = "API endpoint returned 405 Method Not Allowed at " + url + ". The request reached a static file host instead of the backend API. Please configure VITE_API_BASE_URL in your Vercel Project Settings (Environment Variables) to point to your live backend API and redeploy.";
       } else if (response.status >= 500) {
         message = `FixFlow backend service error (${response.status}). Please check server logs and database connectivity.`;
       } else {

@@ -10,7 +10,7 @@
             "name": "Launch Chrome against localhost",
             "url": "http://localhost:5173",
             "webRoot": "${workspaceFolder}/client",
-            "preLaunchTask": "Start Client (Vite)"
+            "preLaunchTask": "Start All Services"
         },
         {
             "type": "chrome",
@@ -18,7 +18,7 @@
             "name": "Launch Chrome (auto-start Vite)",
             "url": "http://localhost:5173",
             "webRoot": "${workspaceFolder}/client",
-            "preLaunchTask": "Start Client (Vite)"
+            "preLaunchTask": "Start All Services"
         },
         {
             "type": "chrome",
