@@ -59,4 +59,4 @@ jobs:
 
     - name: Run client tests
       working-directory: client
-      run: npm test
+      run: npm test -- --reporter=verbose
