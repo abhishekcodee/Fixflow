@@ -157,6 +157,7 @@ export function AdminDashboard() {
         title="Admin Facility Dispatch & Incident Map"
         subtitle="Geospatial overview of active incidents across campus — dispatch technicians and monitor SLA responses"
         onRefresh={() => loadTriageData(false)}
+        userRole="admin"
       />
 
       <Card

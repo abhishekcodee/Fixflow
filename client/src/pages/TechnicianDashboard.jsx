@@ -128,6 +128,7 @@ export function TechnicianDashboard() {
         title="Assigned Work Orders Navigation Map"
         subtitle="Geographic building and floor locations for your assigned maintenance service tickets"
         onRefresh={() => loadWorkOrders(false)}
+        userRole={user?.role}
       />
 
       {/* Active Work Orders Table */}

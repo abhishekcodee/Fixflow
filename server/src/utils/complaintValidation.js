@@ -403,10 +403,39 @@ export const validatePaginationParams = (query = {}) => {
     }
   }
 
+  // Geo-location parameters for Uber-style proximity filter
+  let geo = null;
+  if (query.lat !== undefined && query.lat !== '' && query.lng !== undefined && query.lng !== '') {
+    const lat = parseFloat(query.lat);
+    const lng = parseFloat(query.lng);
+    let radius = 5; // Default 5 km
+
+    if (isNaN(lat) || lat < -90 || lat > 90) {
+      errors.push('Latitude (lat) must be a valid float between -90 and 90.');
+    }
+    if (isNaN(lng) || lng < -180 || lng > 180) {
+      errors.push('Longitude (lng) must be a valid float between -180 and 180.');
+    }
+
+    if (query.radius !== undefined && query.radius !== '') {
+      const parsedRadius = parseFloat(query.radius);
+      if (isNaN(parsedRadius) || parsedRadius < 0.1 || parsedRadius > 50) {
+        errors.push('Search radius must be a positive float between 0.1 km and 50 km.');
+      } else {
+        radius = parsedRadius;
+      }
+    }
+
+    if (errors.length === 0) {
+      geo = { lat, lng, radius };
+    }
+  }
+
   return {
     page,
     limit,
     filters,
+    geo,
     errors
   };
 };

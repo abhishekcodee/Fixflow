@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { complaintsApi } from '../services/api';
@@ -30,8 +30,9 @@ export function UserDashboard() {
   const [loading, setLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState(null);
+  const [geoFilter, setGeoFilter] = useState(null);
 
-  async function fetchDashboardData(isBackground = false) {
+  const fetchDashboardData = useCallback(async (isBackground = false, activeGeo = geoFilter) => {
     if (!isBackground) {
       setLoading(true);
       setError(null);
@@ -39,7 +40,14 @@ export function UserDashboard() {
       setIsRefreshing(true);
     }
     try {
-      const response = await complaintsApi.list({ limit: 50 });
+      const queryParams = { limit: 50 };
+      if (activeGeo && activeGeo.lat && activeGeo.lng) {
+        queryParams.lat = activeGeo.lat;
+        queryParams.lng = activeGeo.lng;
+        queryParams.radius = activeGeo.radius;
+        queryParams.nearby = 'true';
+      }
+      const response = await complaintsApi.list(queryParams);
       const items = response?.complaints || [];
       setComplaints(items);
       setTotalReported(response?.pagination?.total || items.length);
@@ -54,7 +62,7 @@ export function UserDashboard() {
         setIsRefreshing(false);
       }
     }
-  }
+  }, [geoFilter]);
 
   useEffect(() => {
     fetchDashboardData();
@@ -71,7 +79,7 @@ export function UserDashboard() {
       clearInterval(intervalId);
       window.removeEventListener('focus', handleFocus);
     };
-  }, []);
+  }, [fetchDashboardData]);
 
   // Filter complaints based on tab and search
   const filteredComplaints = complaints.filter((item) => {
@@ -165,11 +173,17 @@ export function UserDashboard() {
         </Card>
       </div>
 
-      {/* Real-time Interactive Facility Incidents Map */}
+      {/* Real-time Interactive Facility Incidents Map (Uber-style GPS & Service Radius) */}
       <ComplaintsMap
         complaints={complaints}
         onRefresh={() => fetchDashboardData(false)}
         isRefreshing={isRefreshing}
+        userRole={user?.role}
+        onNearbySearch={(coords, radius) => {
+          const nextGeo = { lat: coords.lat, lng: coords.lng, radius };
+          setGeoFilter(nextGeo);
+          fetchDashboardData(true, nextGeo);
+        }}
       />
 
       {/* Recent Activity Section */}

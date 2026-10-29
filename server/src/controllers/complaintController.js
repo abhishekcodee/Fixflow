@@ -3,6 +3,7 @@ import { ComplaintHistory } from '../models/ComplaintHistory.js';
 import { User } from '../models/User.js';
 import { getNextComplaintNumber } from '../models/Counter.js';
 import { AppError } from '../utils/AppError.js';
+import { filterComplaintsByRadius } from '../utils/geo.js';
 import {
   isValidObjectId,
   validateCreateComplaint,
@@ -122,21 +123,79 @@ export const createComplaint = async (req, res, next) => {
  */
 export const getComplaints = async (req, res, next) => {
   try {
-    const { page, limit, filters, errors } = validatePaginationParams(req.query);
+    const { page, limit, filters, geo, errors } = validatePaginationParams(req.query);
     if (errors.length > 0) {
       return next(new AppError('Invalid query parameters.', 400, 'INVALID_QUERY_PARAMS', errors));
     }
 
     const query = { ...filters };
+    const isNearbyQuery = req.query.nearby === 'true' || req.query.scope === 'nearby';
 
-    // Enforce role-based query isolation:
-    // - Normal users can ONLY see complaints they created
-    // - Technicians can ONLY see complaints assigned to them
-    // - Administrators can see all organizational complaints
-    if (req.user.role === 'user') {
-      query.createdBy = req.user.id;
-    } else if (req.user.role === 'technician') {
-      query.assignedTo = req.user.id;
+    // Maximum permitted radius based on role (prevent bypass):
+    // Standard users: max 10 km (default 5 km)
+    // Technicians: max 25 km
+    // Admins: up to 50 km
+    let effectiveRadius = geo ? geo.radius : 5;
+    if (req.user.role === 'user' && effectiveRadius > 10) {
+      effectiveRadius = 10;
+    } else if (req.user.role === 'technician' && effectiveRadius > 25) {
+      effectiveRadius = 25;
+    }
+
+    // Role-based scoping:
+    // If nearby query is active:
+    // - User can view nearby facility complaints within their authorized radius
+    // - Technician can view nearby complaints within radius
+    // - Admin can view all organizational complaints
+    // If standard query (not nearby):
+    // - User only views their created complaints
+    // - Technician only views their assigned complaints
+    // - Admin views all complaints
+    if (!isNearbyQuery) {
+      if (req.user.role === 'user') {
+        query.createdBy = req.user.id;
+      } else if (req.user.role === 'technician') {
+        query.assignedTo = req.user.id;
+      }
+    }
+
+    // When geo parameters are provided, perform Haversine distance calculation and boundary enforcement
+    if (geo) {
+      const allCandidates = await Complaint.find(query)
+        .sort({ createdAt: -1 })
+        .populate('createdBy', 'name email role')
+        .populate('assignedTo', 'name email role');
+
+      const nearbyComplaints = filterComplaintsByRadius(
+        allCandidates,
+        geo.lat,
+        geo.lng,
+        effectiveRadius
+      );
+
+      const totalNearby = nearbyComplaints.length;
+      const skip = (page - 1) * limit;
+      const paginated = nearbyComplaints.slice(skip, skip + limit);
+      const totalPages = Math.ceil(totalNearby / limit) || 1;
+
+      return res.status(200).json({
+        success: true,
+        data: {
+          complaints: paginated.map((c) => (c.toSafeObject ? c.toSafeObject() : c))
+        },
+        meta: {
+          page,
+          limit,
+          totalCount: totalNearby,
+          totalPages,
+          nearby: {
+            active: true,
+            center: { latitude: geo.lat, longitude: geo.lng },
+            radiusKm: effectiveRadius,
+            totalWithinRadius: totalNearby
+          }
+        }
+      });
     }
 
     const skip = (page - 1) * limit;
