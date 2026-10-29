@@ -2,6 +2,10 @@
   "installCommand": "npm install --include=optional",
   "rewrites": [
     {
+      "source": "/api/email-relay",
+      "destination": "/api/email-relay"
+    },
+    {
       "source": "/api/:path*",
       "destination": "https://fixflowwww.onrender.com/api/:path*"
     },

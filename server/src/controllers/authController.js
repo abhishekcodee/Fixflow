@@ -112,36 +112,20 @@ export const sendOtp = async (req, res, next) => {
     );
 
     // Attempt to dispatch verification email via Gmail SMTP
-    let emailDispatched = false;
-    try {
-      await emailService.sendVerificationOtpEmail({
-        to: normalizedEmail,
-        name: name.trim(),
-        otp,
-        expiresInMinutes: 5
-      });
-      emailDispatched = true;
-    } catch (deliveryError) {
-      if (deliveryError.code === 'EMAIL_SERVICE_NOT_CONFIGURED') {
-        throw deliveryError;
-      }
-      logger.warn(`SMTP email delivery issue (${deliveryError.message}). Providing fallback verification code.`);
-    }
-
-    const responseData = {
-      email: normalizedEmail,
+    await emailService.sendVerificationOtpEmail({
+      to: normalizedEmail,
+      name: name.trim(),
+      otp,
       expiresInMinutes: 5
-    };
-    if (!emailDispatched) {
-      responseData.previewOtp = otp;
-    }
+    });
 
     return res.status(200).json({
       success: true,
-      message: emailDispatched
-        ? `A 6-digit verification code has been dispatched to ${normalizedEmail}. Please enter it to complete registration.`
-        : `Verification code generated: ${otp}. Please enter it below to complete registration.`,
-      data: responseData
+      message: `A 6-digit verification code has been dispatched to ${normalizedEmail}. Please check your email inbox and enter the code below.`,
+      data: {
+        email: normalizedEmail,
+        expiresInMinutes: 5
+      }
     });
   } catch (err) {
     next(err);

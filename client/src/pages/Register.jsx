@@ -121,19 +121,10 @@ export function Register() {
       setOtpExpiresIn(300); // 5 minutes
       setResendCooldown(60); // 60s cooldown
       setRemainingAttempts(null);
-
-      const previewCode = response?.previewOtp || response?.data?.previewOtp;
-      if (previewCode) {
-        setOtp(String(previewCode));
-        setInfoMessage(
-          `Verification code: ${previewCode}. (Notice: Outbound SMTP is restricted on free cloud hosting; your verification code has been auto-filled below).`
-        );
-      } else {
-        setOtp('');
-        setInfoMessage(
-          `A 6-digit verification code has been dispatched to ${email.trim()}. Please enter it below to confirm your account.`
-        );
-      }
+      setOtp('');
+      setInfoMessage(
+        `A 6-digit verification code has been dispatched to ${email.trim()}. Please check your email inbox and enter the code below.`
+      );
     } catch (err) {
       setFormError(
         err.message ||
@@ -151,7 +142,7 @@ export function Register() {
     setIsResending(true);
     setFormError('');
     try {
-      const response = await authApi.sendOtp({
+      await authApi.sendOtp({
         name: name.trim(),
         email: email.trim(),
         password,
@@ -161,14 +152,8 @@ export function Register() {
       setOtpExpiresIn(300);
       setResendCooldown(60);
       setRemainingAttempts(null);
-
-      const previewCode = response?.previewOtp || response?.data?.previewOtp;
-      if (previewCode) {
-        setOtp(String(previewCode));
-        setInfoMessage(`Fresh verification code: ${previewCode}. Auto-filled below.`);
-      } else {
-        setInfoMessage(`A fresh verification code was sent to ${email.trim()}.`);
-      }
+      setOtp('');
+      setInfoMessage(`A fresh verification code was sent to ${email.trim()}. Please check your email inbox.`);
     } catch (err) {
       setFormError(err.message || 'Failed to resend verification code.');
     } finally {
@@ -449,7 +434,7 @@ export function Register() {
                   name="otp"
                   type="text"
                   inputMode="numeric"
-                  autoComplete="one-time-code"
+                  autoComplete="off"
                   maxLength={6}
                   value={otp}
                   onChange={(e) => {

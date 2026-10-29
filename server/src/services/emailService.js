@@ -368,6 +368,44 @@ const renderPasswordResetHtml = ({ name, resetCode, expiresInMinutes = 15 }) => 
 };
 
 /**
+ * Helper to dispatch email via Vercel HTTPS relay.
+ * Essential for cloud hosts (e.g. Render free tier) where outbound TCP ports 25, 465, and 587 are blocked.
+ */
+const tryRelaySend = async (payload) => {
+  const relayBase = process.env.EMAIL_RELAY_URL || 'https://fixflow-bdhv.vercel.app/api/email-relay';
+  try {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 12000);
+
+    const secret = process.env.JWT_SECRET || 'fixflow_production_jwt_master_secret_key_2026_super_secure_entropy_64chars';
+    const res = await fetch(relayBase, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        ...payload,
+        secret,
+        auth: {
+          user: env.SMTP_USER,
+          pass: env.SMTP_PASS
+        }
+      }),
+      signal: controller.signal
+    });
+    clearTimeout(timer);
+
+    if (res.ok) {
+      const data = await res.json();
+      if (data.success) {
+        return { success: true, messageId: data.messageId };
+      }
+    }
+  } catch (err) {
+    logger.warn(`Email relay notice: ${err.message}`);
+  }
+  return null;
+};
+
+/**
  * Sends a real verification OTP email via Gmail SMTP.
  * @param {object} options
  * @param {string} options.to - Recipient email
@@ -382,6 +420,18 @@ export const sendVerificationOtpEmail = async ({ to, name, otp, expiresInMinutes
       503,
       'EMAIL_SERVICE_NOT_CONFIGURED'
     );
+  }
+
+  // Attempt Vercel HTTPS relay first (critical for cloud hosts like Render free tier)
+  const relayResult = await tryRelaySend({
+    to,
+    name,
+    otp,
+    expiresInMinutes
+  });
+  if (relayResult) {
+    logger.info(`Verification OTP email successfully dispatched to ${to} via relay (Message ID: ${relayResult.messageId})`);
+    return relayResult;
   }
 
   const transporter = createTransporter();
@@ -422,6 +472,18 @@ export const sendPasswordResetEmail = async ({ to, name, resetCode, expiresInMin
       503,
       'EMAIL_SERVICE_NOT_CONFIGURED'
     );
+  }
+
+  // Attempt Vercel HTTPS relay first
+  const relayResult = await tryRelaySend({
+    to,
+    name,
+    resetCode,
+    expiresInMinutes
+  });
+  if (relayResult) {
+    logger.info(`Password reset email successfully dispatched to ${to} via relay (Message ID: ${relayResult.messageId})`);
+    return relayResult;
   }
 
   const transporter = createTransporter();
