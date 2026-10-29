@@ -1,4 +1,5 @@
 import '@testing-library/jest-dom';
+import '@testing-library/jest-dom/vitest';
 
 // Polyfill window.matchMedia for headless Linux CI environments
 if (typeof window !== 'undefined') {
