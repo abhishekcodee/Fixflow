@@ -130,12 +130,12 @@ describe('Real Database Authentication & Gmail OTP Verification Suite', () => {
       const found = key ? memUsers.get(key) : null;
       const userObj = found
         ? {
-            ...found,
-            id: found.id || 'u_' + Math.random().toString(36).substring(7),
-            _id: found.id || 'u_' + Math.random().toString(36).substring(7),
-            comparePassword: async (pwd) => bcrypt.compare(pwd, found.passwordHash),
-            select: function () { return this; }
-          }
+          ...found,
+          id: found.id || 'u_' + Math.random().toString(36).substring(7),
+          _id: found.id || 'u_' + Math.random().toString(36).substring(7),
+          comparePassword: async (pwd) => bcrypt.compare(pwd, found.passwordHash),
+          select: function () { return this; }
+        }
         : null;
 
       return {
