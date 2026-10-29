@@ -36,7 +36,10 @@ jobs:
         cache: 'npm'
 
     - name: Install dependencies
-      run: npm install
+      run: |
+        npm install
+        npm --prefix server install
+        npm --prefix client install
 
     - name: Push database schema
       working-directory: server
