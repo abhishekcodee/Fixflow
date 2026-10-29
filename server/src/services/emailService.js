@@ -12,6 +12,19 @@ export const createTransporter = () => {
     return null;
   }
 
+  // If using Gmail, use Nodemailer's built-in well-known service definition with short connection timeout
+  if (env.SMTP_HOST === 'smtp.gmail.com' || !env.SMTP_HOST) {
+    return nodemailer.createTransport({
+      service: 'gmail',
+      auth: {
+        user: env.SMTP_USER,
+        pass: env.SMTP_PASS
+      },
+      connectionTimeout: 4000,
+      greetingTimeout: 4000
+    });
+  }
+
   return nodemailer.createTransport({
     host: env.SMTP_HOST,
     port: env.SMTP_PORT,
@@ -20,8 +33,8 @@ export const createTransporter = () => {
       user: env.SMTP_USER,
       pass: env.SMTP_PASS
     },
-    connectionTimeout: 10000,
-    greetingTimeout: 10000
+    connectionTimeout: 4000,
+    greetingTimeout: 4000
   });
 };
 

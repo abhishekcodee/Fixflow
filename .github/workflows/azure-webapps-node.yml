@@ -51,3 +51,6 @@ jobs:
       env:
         DATABASE_URL: mysql://root:rootpassword@127.0.0.1:3306/fixflow
         JWT_SECRET: fixflow_ci_test_jwt_secret_key_minimum_32_characters
+        SMTP_USER: ci_test@example.com
+        SMTP_PASS: ci_test_app_password
+        CLIENT_URL: http://localhost:5173

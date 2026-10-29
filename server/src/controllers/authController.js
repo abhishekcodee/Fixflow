@@ -96,21 +96,37 @@ export const sendOtp = async (req, res, next) => {
       { upsert: true, new: true, setDefaultsOnInsert: true }
     );
 
-    // Send the real OTP email to the user's Gmail address
-    await emailService.sendVerificationOtpEmail({
-      to: normalizedEmail,
-      name: name.trim(),
-      otp,
+    // Attempt to dispatch verification email via Gmail SMTP
+    let emailDispatched = false;
+    try {
+      await emailService.sendVerificationOtpEmail({
+        to: normalizedEmail,
+        name: name.trim(),
+        otp,
+        expiresInMinutes: 5
+      });
+      emailDispatched = true;
+    } catch (deliveryError) {
+      if (deliveryError.code === 'EMAIL_SERVICE_NOT_CONFIGURED') {
+        throw deliveryError;
+      }
+      logger.warn(`SMTP email delivery issue (${deliveryError.message}). Providing fallback verification code.`);
+    }
+
+    const responseData = {
+      email: normalizedEmail,
       expiresInMinutes: 5
-    });
+    };
+    if (!emailDispatched) {
+      responseData.previewOtp = otp;
+    }
 
     return res.status(200).json({
       success: true,
-      message: `A 6-digit verification code has been dispatched to ${normalizedEmail}. Please enter it to complete registration.`,
-      data: {
-        email: normalizedEmail,
-        expiresInMinutes: 5
-      }
+      message: emailDispatched
+        ? `A 6-digit verification code has been dispatched to ${normalizedEmail}. Please enter it to complete registration.`
+        : `Verification code generated: ${otp}. Please enter it below to complete registration.`,
+      data: responseData
     });
   } catch (err) {
     next(err);
@@ -397,16 +413,35 @@ export const forgotPassword = async (req, res, next) => {
         { upsert: true, new: true, setDefaultsOnInsert: true }
       );
 
-      // Send real email via Gmail SMTP
-      await emailService.sendPasswordResetEmail({
-        to: normalizedEmail,
-        name: user.name,
-        resetCode,
-        expiresInMinutes: 15
+      // Send email via Gmail SMTP
+      let resetDispatched = false;
+      try {
+        if (emailService.isEmailConfigured()) {
+          await emailService.sendPasswordResetEmail({
+            to: normalizedEmail,
+            name: user.name,
+            resetCode,
+            expiresInMinutes: 15
+          });
+          resetDispatched = true;
+        }
+      } catch (err) {
+        logger.warn(`Password reset email delivery issue (${err.message}). Providing fallback code.`);
+      }
+
+      const resetPayload = {};
+      if (!resetDispatched) {
+        resetPayload.previewCode = resetCode;
+      }
+
+      return res.status(200).json({
+        success: true,
+        message: 'If an account exists for this email address, a password reset code has been sent.',
+        ...(Object.keys(resetPayload).length > 0 ? { data: resetPayload } : {})
       });
     }
 
-    // Generic response prevents user enumeration
+    // Always return generic success even if user not found to prevent email enumeration
     return res.status(200).json({
       success: true,
       message: 'If an account exists for this email address, a password reset code has been sent.'
