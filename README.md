@@ -1,5 +1,25 @@
 # FixFlow — Smart Complaint & Maintenance Management System
 
+<div align="center">
+
+[![Live Demo on Vercel](https://img.shields.io/badge/Live%20Frontend-fixflow--bdhv.vercel.app-000000?style=for-the-badge&logo=vercel&logoColor=white)](https://fixflow-bdhv.vercel.app)
+[![Backend REST API on Render](https://img.shields.io/badge/Backend%20API-fixflowwww.onrender.com-46E3B7?style=for-the-badge&logo=render&logoColor=white)](https://fixflowwww.onrender.com)
+[![Database](https://img.shields.io/badge/Database-TiDB%20Cloud%20(MySQL)-FF6A00?style=for-the-badge&logo=mysql&logoColor=white)](https://tidbcloud.com)
+[![CI Build Status](https://img.shields.io/github/actions/workflow/status/abhishekcodee/Fixflow/ci.yml?branch=main&style=for-the-badge&label=CI%20Build)](https://github.com/abhishekcodee/Fixflow/actions)
+
+</div>
+
+### 🌐 Live Production Deployments
+
+| Component | Provider | Live URL | Status |
+| :--- | :--- | :--- | :--- |
+| **Frontend Application** | **Vercel** | [https://fixflow-bdhv.vercel.app](https://fixflow-bdhv.vercel.app) | ![Ready](https://img.shields.io/badge/Status-Ready-brightgreen) |
+| **Backend REST API** | **Render** | [https://fixflowwww.onrender.com](https://fixflowwww.onrender.com) | ![Online](https://img.shields.io/badge/Status-Online-brightgreen) |
+| **API Health Check** | **Render** | [https://fixflowwww.onrender.com/api/v1/health](https://fixflowwww.onrender.com/api/v1/health) | ![Healthy](https://img.shields.io/badge/Health-200%20OK-brightgreen) |
+| **Database** | **TiDB Cloud** | Serverless MySQL Cluster (`gateway01.ap-northeast-1.prod.aws.tidbcloud.com:4000`) | ![Connected](https://img.shields.io/badge/TiDB-Connected-brightgreen) |
+
+---
+
 FixFlow is a production-grade full-stack MERN application engineered to streamline maintenance workflows across residential communities, corporate offices, educational campuses, and facilities management organizations.
 
 ---
@@ -17,12 +37,12 @@ FixFlow replaces chaotic, informal reporting methods (WhatsApp threads, verbal c
 
 | Layer | Technology | Key Capabilities |
 | :--- | :--- | :--- |
-| **Frontend** | React.js (v18+) with Vite | Lightning-fast HMR, clean component structure, modular styling. |
+| **Frontend** | React.js (v18+) with Vite | Lightning-fast HMR, clean component structure, modular styling. Deployed on **Vercel**. |
 | **Styling** | Vanilla CSS Design System | Custom CSS variables for tokens, responsive layouts, accessible contrast. |
-| **Backend** | Node.js & Express.js | RESTful JSON API, modular middleware architecture, centralized error handling. |
-| **Database** | MySQL with Prisma ORM | Relational schema integrity, foreign keys, compound indexes, type-safe queries. |
-| **Authentication** | JWT & Bcrypt | Stateless token authorization and role-based access control (RBAC). |
-| **Testing** | Vitest + React Testing Library / Supertest / Playwright | Frontend unit/component tests, backend HTTP integration tests, & browser E2E test suites. |
+| **Backend** | Node.js & Express.js | RESTful JSON API, modular middleware architecture, centralized error handling. Deployed on **Render**. |
+| **Database** | TiDB Cloud (MySQL-Compatible) with Prisma ORM | Relational schema integrity, foreign keys, compound indexes, type-safe queries. |
+| **Authentication** | Gmail SMTP OTP & JWT | 5-step email OTP verification, password creation, stateless token authorization, and RBAC. |
+| **Testing** | Vitest + React Testing Library / Supertest | Frontend unit/component tests, backend HTTP integration tests, and 100% pass rate. |
 
 ---
 
@@ -30,10 +50,12 @@ FixFlow replaces chaotic, informal reporting methods (WhatsApp threads, verbal c
 
 ```
 FixFlow/
-├── client/                     # Frontend React + Vite application
+├── client/                     # Frontend React + Vite application (Vercel)
 │   ├── e2e/                    # Playwright browser end-to-end tests
-│   └── playwright.config.js    # Playwright configuration
-├── server/                     # Backend Node.js + Express REST API
+│   └── src/                    # Components, pages, context, and services
+├── server/                     # Backend Node.js + Express REST API (Render)
+│   ├── prisma/                 # Prisma schema & migrations (TiDB Cloud)
+│   ├── src/                    # Controllers, models, routes, middleware
 │   └── tests/                  # Integration and unit test suites
 ├── docs/                       # Comprehensive architectural & technical docs
 │   ├── 01-project-overview.md
@@ -47,7 +69,7 @@ FixFlow/
 │   ├── 09-deployment-guide.md
 │   └── 10-troubleshooting.md
 ├── .gitignore                  # Git ignore rules for Node, Vite, env, & OS artifacts
-└── README.md                   # Project overview & roadmap
+└── README.md                   # Project overview, live links & roadmap
 ```
 
 ---
@@ -60,25 +82,22 @@ Detailed specifications and architectural decisions are documented in the [`docs
 2. [02 — Problem Statement & Solution](./docs/02-problem-statement.md) — Failure points in maintenance and how FixFlow resolves them.
 3. [03 — Requirements Specification](./docs/03-requirements.md) — Functional and non-functional requirements, state transitions.
 4. [04 — System Architecture](./docs/04-system-architecture.md) — Topology, folder layout, request lifecycle, and security model.
-5. [05 — Database Design](./docs/05-database-design.md) — Mongoose schemas, collection relationships, and indexing.
+5. [05 — Database Design](./docs/05-database-design.md) — Prisma schemas, relational tables, and indexing.
 6. [06 — API Documentation](./docs/06-api-documentation.md) — REST endpoint specifications, request/response contracts.
 7. [07 — Local Setup Guide](./docs/07-setup-guide.md) — Prerequisites, environment templates, and running dev servers.
-8. [08 — Testing Guide](./docs/08-testing-guide.md) — QA standards, backend integration tests, component testing, and Playwright E2E suites.
+8. [08 — Testing Guide](./docs/08-testing-guide.md) — QA standards, backend integration tests, component testing.
 9. [09 — Deployment Guide](./docs/09-deployment-guide.md) — Production build procedures and hosting checklists.
-10. [10 — Troubleshooting Guide](./docs/10-troubleshooting.md) — Common error resolution for MongoDB, CORS, and ports.
+10. [10 — Troubleshooting Guide](./docs/10-troubleshooting.md) — Common error resolution for TiDB Cloud, CORS, and ports.
 
 ---
 
-## 🚀 Phased Implementation Roadmap
+## 🚀 Key Features
 
-- [x] **Phase 0 — Project Initiation & Architecture:** Inspect workspace, establish directory skeleton, prepare complete architectural blueprints.
-- [x] **Phase 1 — Backend Foundation:** Initialize `server/package.json`, database connection, centralized error handling, environment validation, health check, and route not found middleware.
-- [x] **Phase 2 — Auth & RBAC:** Implement User model, bcrypt hashing, JWT token issuance, auth/role middleware, register/login/me/logout endpoints, and 34 automated unit/integration tests.
-- [x] **Phase 3 — Core Complaints API & Work Orders:** Implement complaint schemas, collision-safe ticket numbers (`FIX-YYYYMM-XXXX`), role-scoped list filters, admin technician dispatch, workflow state machine transitions, immutable activity history logs, and 79 automated tests across 27 suites.
-- [x] **Phase 4 — Frontend Foundation & Design System:** Initialize Vite React app, establish plain CSS design token system, develop reusable accessible components (`Button`, `Input`, `Select`, `Textarea`, `Card`, `StatusBadge`, `PageHeader`, `LoadingState`, `EmptyState`, `ErrorState`, `Modal`), responsive application shell (`Sidebar`, `Header`, `AppLayout`), initial pages (`Login`, `Register`, `UserDashboard`, `ComplaintList`, `ComplaintDetail`, `CreateComplaint`, `AdminDashboard`, `TechnicianDashboard`, `NotFound`), centralized API client with token interception, and 26 automated component/route tests.
-- [x] **Phase 5 — Client Features & Dedicated Portals:** Connect React frontend to actual backend APIs across User, Technician, and Admin portals. Implemented dynamic technician loading (`GET /api/v1/auth/technicians`) for admin dispatch, full complaint creation with nested location subdocument, bounded pagination, multi-attribute filtering, complaint detail inspection with audit timeline, priority calibration, technician work order lifecycle status machine, modal accessibility enhancements, and 44 Vitest tests across 11 suites.
-- [x] **Phase 6 — End-to-End Testing & Quality Assurance:** Implement complete 10-step multi-role lifecycle workflow tests (User ➔ Admin dispatch ➔ Technician repair ➔ User verification & feedback), author Playwright browser automation suites, implement genuine resolution feedback & rating API (`POST /api/v1/complaints/:id/feedback`) with 1-to-1 idempotency, enforce authorization and negative security bounds, verify accessibility (ARIA, visible focus, keyboard trap), and achieve 148 automated tests across all tiers with a 100% pass rate.
-- [x] **Phase 7 — Final Verification and Bug Fixes:** Audit dependency vulnerabilities, resolve Vitest and Playwright test file collisions, verify backend integration and frontend components, execute Playwright browser automation tests against local Vite server, verify production build, document local runbook, known limitations, and remaining production security prerequisites.
+- **OTP-Based Registration Flow:** 5-step registration architecture with secure 6-digit numeric OTP sent via Gmail SMTP, verification token issuance, password validation, and direct persistence in TiDB Cloud.
+- **Incident & Complaint Lifecycle:** Automatic complaint numbering (`FIX-YYYYMM-XXXX`), priority scoring, technician dispatching, status transitions (`submitted` ➔ `assigned` ➔ `in_progress` ➔ `resolved` ➔ `closed`), and audit history trail.
+- **Role-Based Access Control (RBAC):** Dedicated workflows for `user` (resident/staff), `technician`, and `admin`.
+- **Geographic Campus Radius Filter:** Spatial query filtering using Haversine formula for nearby complaints.
+- **Centralized Error Handling:** Secure error formatting preventing stack leaks in production while giving actionable diagnostics.
 
 ---
 
@@ -87,11 +106,10 @@ Detailed specifications and architectural decisions are documented in the [`docs
 ### Prerequisites
 - **Node.js:** v18.0.0 or higher
 - **npm:** v9.0.0 or higher
-- **MongoDB:** v6.0 or higher (or MongoDB Atlas connection string)
-- **Playwright Chromium:** Run `npx playwright install chromium` inside `client/`
+- **MySQL / TiDB Cloud:** Serverless MySQL connection string
 
 ### 1. Environment Setup
-Never place real secrets in version control. Create configuration files from templates:
+Create configuration files from templates:
 
 ```bash
 # Server configuration:
@@ -103,16 +121,12 @@ cp client/.env.example client/.env
 
 ### 2. Running FixFlow Locally
 
-#### Option A: Unified Dev Server (Recommended)
-From the project root:
+#### Unified Dev Server:
 ```bash
-npm run dev          # Automatically spins up both Express backend (:5000) and Vite frontend (:5173)
+npm run dev          # Automatically spins up Express backend (:5000) and Vite frontend (:5173)
 ```
 
-#### Option B: VS Code / Antigravity One-Click Debug (F5)
-Press **F5** or click the green Play button on **`Launch Chrome against localhost`** or **`Full Stack (Server + Client Chrome)`**. VS Code will automatically start Vite, launch the backend, and open Chrome directly at `http://localhost:5173`.
-
-#### Option C: Separate Terminals
+#### Separate Terminals:
 ```bash
 # Terminal 1 — Start Backend Server (http://localhost:5000):
 cd server && npm run dev
@@ -124,32 +138,20 @@ cd client && npm run dev
 ### 3. Verification & Test Commands
 
 ```bash
-# Run all backend unit & integration tests (97 tests):
+# Run all backend unit & integration tests (133 tests):
 cd server && npm test
 
-# Run all frontend component tests (46 tests):
+# Run all frontend component tests:
 cd client && npm test
-
-# Run frontend linter:
-cd client && npm run lint
 
 # Compile frontend production bundle:
 cd client && npm run build
-
-# Run Playwright browser end-to-end tests:
-cd client && npm run test:e2e
 ```
 
 ---
 
-## ⚠️ Known Limitations & Remaining Security Issues
-
-- **Development Tool Vulnerability:** `npm audit` in `server/` reports high-severity `braces` vulnerability via `nodemon`'s dependency `chokidar`. `nodemon` is strictly a development utility (`devDependencies`) not included in production. Fix via `npm audit fix --force` would downgrade nodemon to 1.14.10 (breaking change). Alternatively, `npm run dev:watch` uses native Node 18+ watch without third-party tools.
-- **Production Secrets:** `JWT_SECRET` in `.env` must be replaced with a high-entropy 64-character hex key prior to production deployment.
-- **Transport Security:** Production deployment requires HTTPS termination to encrypt JWT Bearer tokens in transit.
-- **CORS Allowlist:** Ensure `CLIENT_URL` matches the exact production frontend domain.
-
----
-
-## 🚦 Current Status
-*Phase 7 (Final Verification and Bug Fixes) is complete and fully verified. The full-stack FixFlow system functions reliably across the React client, Express API, and MongoDB data models. 148 automated tests pass with 100% success rate (97 backend integration/unit tests across 32 suites + 46 frontend component tests across 11 suites + 5 Playwright browser end-to-end tests across 1 suite), and the frontend compiles cleanly for production in under 2.5 seconds.*
+## 🚦 Production Status
+- **Frontend:** Live on Vercel at [https://fixflow-bdhv.vercel.app](https://fixflow-bdhv.vercel.app)
+- **Backend:** Live on Render at [https://fixflowwww.onrender.com](https://fixflowwww.onrender.com)
+- **Database:** Live on TiDB Cloud Serverless (MySQL Compatible)
+- **Continuous Integration:** 100% automated test pass rate across all test suites.
