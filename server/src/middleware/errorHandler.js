@@ -79,7 +79,7 @@ export const errorHandler = (err, req, res, next) => {
     });
   }
 
-  // Production Response: Sanitize unexpected non-operational errors
+  // Production Response: Operational AppError
   if (error.isOperational) {
     return res.status(statusCode).json({
       success: false,
@@ -91,12 +91,23 @@ export const errorHandler = (err, req, res, next) => {
     });
   }
 
-  // Generic fallback for unhandled bugs in production (prevent leaks)
+  // Database / Prisma error transparency
+  if (err.name?.startsWith('Prisma') || err.code?.startsWith('P') || error.name?.startsWith('Prisma')) {
+    return res.status(500).json({
+      success: false,
+      error: {
+        message: `Database error: ${error.message || err.message}`,
+        code: err.code || 'DATABASE_ERROR'
+      }
+    });
+  }
+
+  // Generic fallback for unhandled exceptions
   return res.status(500).json({
     success: false,
     error: {
-      message: 'An unexpected internal server error occurred.',
-      code: 'INTERNAL_SERVER_ERROR'
+      message: error.message || 'An unexpected internal server error occurred.',
+      code: error.code || 'INTERNAL_SERVER_ERROR'
     }
   });
 };
