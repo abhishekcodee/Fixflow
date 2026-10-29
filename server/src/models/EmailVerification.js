@@ -32,16 +32,15 @@ export class EmailVerification {
 
   static async findOne(query = {}) {
     const email = query.email ? String(query.email).trim().toLowerCase() : undefined;
-    if (!email) {
-      if (query.id || query._id) {
-        const id = String(query.id || query._id);
-        const item = await prisma.emailVerification.findUnique({ where: { id } });
-        return attachMethods(item);
-      }
-      return null;
-    }
+    const where = {};
+    if (email) where.email = email;
+    if (query.verificationToken) where.verificationToken = String(query.verificationToken).trim();
+    if (query.id || query._id) where.id = String(query.id || query._id);
+
+    if (Object.keys(where).length === 0) return null;
+
     const item = await prisma.emailVerification.findFirst({
-      where: { email }
+      where
     });
     return attachMethods(item);
   }
@@ -52,15 +51,19 @@ export class EmailVerification {
 
   static async findOneAndUpdate(filter, update) {
     const email = filter.email ? String(filter.email).trim().toLowerCase() : undefined;
+    const existing = email ? await prisma.emailVerification.findUnique({ where: { email } }) : null;
+
     const data = {
       email,
-      otpHash: update.otpHash,
-      pendingName: update.pendingName,
-      pendingPasswordHash: update.pendingPasswordHash,
-      pendingRole: update.pendingRole || 'user',
-      attempts: update.attempts !== undefined ? update.attempts : 0,
-      lastResendAt: update.lastResendAt || new Date(),
-      expiresAt: update.expiresAt
+      otpHash: update.otpHash !== undefined ? update.otpHash : existing?.otpHash,
+      pendingName: update.pendingName !== undefined ? update.pendingName : existing?.pendingName,
+      pendingPhone: update.pendingPhone !== undefined ? (update.pendingPhone ? String(update.pendingPhone).trim() : null) : existing?.pendingPhone,
+      pendingPasswordHash: update.pendingPasswordHash !== undefined ? update.pendingPasswordHash : existing?.pendingPasswordHash,
+      pendingRole: update.pendingRole || existing?.pendingRole || 'user',
+      verificationToken: update.verificationToken !== undefined ? update.verificationToken : existing?.verificationToken,
+      attempts: update.attempts !== undefined ? update.attempts : (existing?.attempts ?? 0),
+      lastResendAt: update.lastResendAt || existing?.lastResendAt || new Date(),
+      expiresAt: update.expiresAt || existing?.expiresAt || new Date(Date.now() + 5 * 60 * 1000)
     };
 
     const item = await prisma.emailVerification.upsert({

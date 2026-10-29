@@ -5,6 +5,7 @@ import { AppError } from '../utils/AppError.js';
 import { signToken, generateNumericOtp } from '../utils/token.js';
 import {
   validateRegistrationInput,
+  validatePasswordSetup,
   validateLoginInput,
   validateOtpInput,
   validateForgotPasswordInput,
@@ -13,6 +14,7 @@ import {
 import emailService from '../services/emailService.js';
 import { logger } from '../utils/logger.js';
 import { env } from '../config/env.js';
+import crypto from 'crypto';
 
 /**
  * Checks whether the current process is running in test mode.
@@ -33,10 +35,10 @@ const isTestEnv = () => {
  */
 export const sendOtp = async (req, res, next) => {
   try {
-    const { name, email, password, role = 'user' } = req.body;
+    const { name, email, phone, password, role = 'user' } = req.body;
 
     // Validate registration input
-    const validation = validateRegistrationInput({ name, email, password, role });
+    const validation = validateRegistrationInput({ name, email, phone, password, role });
     if (!validation.isValid) {
       return next(
         new AppError('Validation failed on registration input.', 400, 'VALIDATION_ERROR', validation.errors)
@@ -45,6 +47,7 @@ export const sendOtp = async (req, res, next) => {
 
     const assignedRole = role === 'technician' ? 'technician' : 'user';
     const normalizedEmail = email.trim().toLowerCase();
+    const cleanPhone = phone ? String(phone).trim() : null;
 
     // Check if an already verified user exists with this email
     const existingUser = await User.findOne({ email: normalizedEmail });
@@ -52,6 +55,16 @@ export const sendOtp = async (req, res, next) => {
       return next(
         new AppError('An account with this email address already exists.', 409, 'EMAIL_ALREADY_EXISTS')
       );
+    }
+
+    // Check if an already verified user exists with this mobile number
+    if (cleanPhone) {
+      const existingPhoneUser = await User.findOne({ phone: cleanPhone });
+      if (existingPhoneUser && existingPhoneUser.isVerified) {
+        return next(
+          new AppError('An account with this mobile number already exists.', 409, 'PHONE_ALREADY_EXISTS')
+        );
+      }
     }
 
     // Rate limiting & resend cooldown check (60-second cooldown)
@@ -73,10 +86,10 @@ export const sendOtp = async (req, res, next) => {
     // Generate cryptographically secure 6-digit OTP
     const otp = generateNumericOtp(6);
 
-    // Securely hash OTP and password for staged registration
+    // Hash OTP and pending password if supplied
     const [otpHash, pendingPasswordHash] = await Promise.all([
       EmailVerification.hashOtp(otp),
-      User.hashPassword(password)
+      password ? User.hashPassword(password) : Promise.resolve(null)
     ]);
 
     // Upsert pending email verification in database (expires in 5 minutes)
@@ -87,8 +100,10 @@ export const sendOtp = async (req, res, next) => {
         email: normalizedEmail,
         otpHash,
         pendingName: name.trim(),
+        pendingPhone: cleanPhone,
         pendingPasswordHash,
         pendingRole: assignedRole,
+        verificationToken: null,
         attempts: 0,
         lastResendAt: new Date(),
         expiresAt
@@ -135,7 +150,8 @@ export const sendOtp = async (req, res, next) => {
 
 /**
  * @route   POST /api/v1/auth/verify-otp
- * @desc    Verifies 6-digit OTP and creates the real verified user in the database.
+ * @desc    Verifies 6-digit OTP. If password was staged, activates user directly.
+ *          Otherwise, generates and returns a secure verificationToken for password creation.
  * @access  Public
  */
 export const verifyOtp = async (req, res, next) => {
@@ -191,39 +207,141 @@ export const verifyOtp = async (req, res, next) => {
       );
     }
 
-    // Verification successful! Create or update verified user in database
-    const assignedRole = pendingRecord.pendingRole || 'user';
-    let user = await User.findOne({ email: normalizedEmail });
-    if (user) {
-      user.name = pendingRecord.pendingName;
-      user.passwordHash = pendingRecord.pendingPasswordHash;
-      user.role = assignedRole;
-      user.isActive = true;
-      user.isVerified = true;
-      await user.save();
-    } else {
-      user = await User.create({
-        name: pendingRecord.pendingName,
-        email: normalizedEmail,
-        passwordHash: pendingRecord.pendingPasswordHash,
-        role: assignedRole,
-        isActive: true,
-        isVerified: true
+    // If password was already staged (legacy 1-step tests)
+    if (pendingRecord.pendingPasswordHash) {
+      const assignedRole = pendingRecord.pendingRole || 'user';
+      let user = await User.findOne({ email: normalizedEmail });
+      if (user) {
+        user.name = pendingRecord.pendingName;
+        user.phone = pendingRecord.pendingPhone || user.phone;
+        user.passwordHash = pendingRecord.pendingPasswordHash;
+        user.role = assignedRole;
+        user.isActive = true;
+        user.isVerified = true;
+        await user.save();
+      } else {
+        user = await User.create({
+          name: pendingRecord.pendingName,
+          email: normalizedEmail,
+          phone: pendingRecord.pendingPhone || null,
+          passwordHash: pendingRecord.pendingPasswordHash,
+          role: assignedRole,
+          isActive: true,
+          isVerified: true
+        });
+      }
+
+      await EmailVerification.deleteOne({ _id: pendingRecord._id });
+      const token = signToken(user);
+
+      return res.status(201).json({
+        success: true,
+        message: 'Email verified successfully. Your account is now active.',
+        data: {
+          user: user.toSafeObject(),
+          token
+        }
       });
     }
 
-    // Invalidate the used OTP record
+    // Step 4 verification token generation (for 5-step registration flow)
+    const verificationToken = crypto.randomBytes(32).toString('hex');
+    pendingRecord.verificationToken = verificationToken;
+    await pendingRecord.save();
+
+    return res.status(200).json({
+      success: true,
+      verified: true,
+      message: 'Email verified successfully. Please create your password to complete registration.',
+      data: {
+        email: normalizedEmail,
+        verificationToken
+      }
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+/**
+ * @route   POST /api/v1/auth/complete-registration
+ * @desc    Completes user registration after OTP verification by creating password and persisting user in TiDB Cloud.
+ * @access  Public
+ */
+export const completeRegistration = async (req, res, next) => {
+  try {
+    const { email, verificationToken, password, confirmPassword } = req.body;
+
+    if (!email || !verificationToken) {
+      return next(
+        new AppError('Email and verification token are required to complete registration.', 400, 'VALIDATION_ERROR')
+      );
+    }
+
+    const pwdValidation = validatePasswordSetup({ password, confirmPassword });
+    if (!pwdValidation.isValid) {
+      return next(
+        new AppError('Password validation failed.', 400, 'VALIDATION_ERROR', pwdValidation.errors)
+      );
+    }
+
+    const normalizedEmail = email.trim().toLowerCase();
+
+    // Verify verification record with matching verificationToken
+    const pendingRecord = await EmailVerification.findOne({
+      email: normalizedEmail,
+      verificationToken: String(verificationToken).trim()
+    });
+
+    if (!pendingRecord) {
+      return next(
+        new AppError('Invalid or expired verification session. Please verify your email again.', 400, 'INVALID_VERIFICATION_SESSION')
+      );
+    }
+
+    // Double-check duplicate email in User table
+    const existingEmail = await User.findOne({ email: normalizedEmail });
+    if (existingEmail && existingEmail.isVerified) {
+      await EmailVerification.deleteOne({ _id: pendingRecord._id });
+      return next(
+        new AppError('An account with this email address already exists.', 409, 'EMAIL_ALREADY_EXISTS')
+      );
+    }
+
+    // Double-check duplicate phone if phone was supplied
+    if (pendingRecord.pendingPhone) {
+      const existingPhone = await User.findOne({ phone: pendingRecord.pendingPhone });
+      if (existingPhone && existingPhone.isVerified) {
+        return next(
+          new AppError('An account with this mobile number already exists.', 409, 'PHONE_ALREADY_EXISTS')
+        );
+      }
+    }
+
+    // Hash password securely with bcrypt
+    const passwordHash = await User.hashPassword(password);
+
+    // Save verified user in TiDB Cloud database
+    const user = await User.create({
+      name: pendingRecord.pendingName,
+      email: normalizedEmail,
+      phone: pendingRecord.pendingPhone || null,
+      passwordHash,
+      role: pendingRecord.pendingRole || 'user',
+      isActive: true,
+      isVerified: true
+    });
+
+    // Invalidate the used verification record
     await EmailVerification.deleteOne({ _id: pendingRecord._id });
 
-    // Issue JWT
-    const token = signToken(user);
+    logger.info(`User registration completed successfully: ${user.email} (Role: ${user.role})`);
 
     return res.status(201).json({
       success: true,
-      message: 'Email verified successfully. Your account is now active.',
+      message: 'Account created successfully! You can now log in.',
       data: {
-        user: user.toSafeObject(),
-        token
+        user: user.toSafeObject ? user.toSafeObject() : user
       }
     });
   } catch (err) {
@@ -578,11 +696,11 @@ export const getTechnicians = async (req, res, next) => {
 
     const safeTechnicians = Array.isArray(technicians)
       ? technicians.map((t) => ({
-          _id: t._id,
-          name: t.name,
-          email: t.email,
-          role: t.role
-        }))
+        _id: t._id,
+        name: t.name,
+        email: t.email,
+        role: t.role
+      }))
       : [];
 
     return res.status(200).json({
@@ -799,6 +917,7 @@ export const githubLogin = async (req, res, next) => {
 export default {
   sendOtp,
   verifyOtp,
+  completeRegistration,
   register,
   login,
   forgotPassword,

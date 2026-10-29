@@ -122,6 +122,7 @@ export const authApi = {
   register: (payload) => request('/auth/register', { method: 'POST', body: payload }),
   sendOtp: (payload) => request('/auth/send-otp', { method: 'POST', body: payload }),
   verifyOtp: (payload) => request('/auth/verify-otp', { method: 'POST', body: payload }),
+  completeRegistration: (payload) => request('/auth/complete-registration', { method: 'POST', body: payload }),
   forgotPassword: (payload) => request('/auth/forgot-password', { method: 'POST', body: payload }),
   resetPassword: (payload) => request('/auth/reset-password', { method: 'POST', body: payload }),
   getProfile: () => request('/auth/me', { method: 'GET' }),

@@ -12,6 +12,7 @@ model User {
   id           String    @id @default(uuid())
   name         String    @db.VarChar(60)
   email        String    @unique @db.VarChar(191)
+  phone        String?   @unique @db.VarChar(30)
   passwordHash String?   @db.VarChar(255)
   githubId     String?   @unique @db.VarChar(191)
   avatarUrl    String?   @db.Text
@@ -49,12 +50,10 @@ model Complaint {
   // Relationships
   createdById         String
   createdBy           User      @relation("ComplaintCreator", fields: [createdById], references: [id], onDelete: Cascade)
-
   assignedToId        String?
   assignedTo          User?     @relation("ComplaintTechnician", fields: [assignedToId], references: [id], onDelete: SetNull)
-  assignedAt          DateTime?
 
-  // Resolution lifecycle
+  // Resolution fields
   resolutionNotes     String?   @db.Text
   resolvedAt          DateTime?
   closedAt            DateTime?
@@ -94,8 +93,10 @@ model EmailVerification {
   email               String   @unique @db.VarChar(191)
   otpHash             String   @db.VarChar(255)
   pendingName         String   @db.VarChar(60)
-  pendingPasswordHash String   @db.VarChar(255)
+  pendingPhone        String?  @db.VarChar(30)
+  pendingPasswordHash String?  @db.VarChar(255)
   pendingRole         String   @default("user") @db.VarChar(20)
+  verificationToken   String?  @db.VarChar(255)
   attempts            Int      @default(0)
   lastResendAt        DateTime @default(now())
   expiresAt           DateTime

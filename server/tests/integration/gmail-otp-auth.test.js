@@ -170,7 +170,7 @@ describe('Real Database Authentication & Gmail OTP Verification Suite', () => {
         isDbConnected = true;
         await EmailVerification.deleteMany({});
         await PasswordReset.deleteMany({});
-        await User.deleteMany({ email: { $in: ['test_otp@example.com', 'reset_user@example.com', 'candidate@example.com', 'test_tech_reg@example.com'] } });
+        await User.deleteMany({ email: { $in: ['test_otp@example.com', 'reset_user@example.com', 'candidate@example.com', 'test_tech_reg@example.com', 'finalize_user@example.com', 'multistep_user@example.com'] } });
       } else {
         isDbConnected = false;
         setupInMemoryMocks();
@@ -186,7 +186,7 @@ describe('Real Database Authentication & Gmail OTP Verification Suite', () => {
       try {
         await EmailVerification.deleteMany({});
         await PasswordReset.deleteMany({});
-        await User.deleteMany({ email: { $in: ['test_otp@example.com', 'reset_user@example.com', 'candidate@example.com', 'test_tech_reg@example.com'] } });
+        await User.deleteMany({ email: { $in: ['test_otp@example.com', 'reset_user@example.com', 'candidate@example.com', 'test_tech_reg@example.com', 'finalize_user@example.com', 'multistep_user@example.com'] } });
         await disconnectDatabase();
       } catch {
         // Ignore disconnect errors
@@ -411,6 +411,113 @@ describe('Real Database Authentication & Gmail OTP Verification Suite', () => {
       const dbUser = await User.findOne({ email: 'test_tech_reg@example.com' });
       assert.ok(dbUser);
       assert.strictEqual(dbUser.role, 'technician');
+    });
+
+    it('should return verificationToken when password was not pre-staged (5-step flow)', async () => {
+      const rawOtp = '777888';
+      const otpHash = await EmailVerification.hashOtp(rawOtp);
+
+      await EmailVerification.create({
+        email: 'multistep_user@example.com',
+        otpHash,
+        pendingName: 'MultiStep User',
+        pendingPhone: '+91 9876543210',
+        pendingPasswordHash: null,
+        pendingRole: 'user',
+        attempts: 0,
+        expiresAt: new Date(Date.now() + 5 * 60 * 1000)
+      });
+
+      const res = await request(app)
+        .post('/api/v1/auth/verify-otp')
+        .send({
+          email: 'multistep_user@example.com',
+          otp: rawOtp
+        });
+
+      assert.strictEqual(res.status, 200);
+      assert.strictEqual(res.body.success, true);
+      assert.strictEqual(res.body.verified, true);
+      assert.ok(res.body.data.verificationToken);
+    });
+  });
+
+  describe('POST /api/v1/auth/complete-registration', () => {
+    let validToken = null;
+
+    before(async () => {
+      await User.deleteMany({ email: 'finalize_user@example.com' });
+      await EmailVerification.deleteMany({ email: 'finalize_user@example.com' });
+      const rawOtp = '999111';
+      const otpHash = await EmailVerification.hashOtp(rawOtp);
+      const ev = await EmailVerification.create({
+        email: 'finalize_user@example.com',
+        otpHash,
+        pendingName: 'Finalize Candidate',
+        pendingPhone: '+91 9123456780',
+        pendingPasswordHash: null,
+        pendingRole: 'user',
+        verificationToken: 'secure-token-abcdef1234567890',
+        attempts: 0,
+        expiresAt: new Date(Date.now() + 5 * 60 * 1000)
+      });
+      validToken = ev.verificationToken;
+    });
+
+    it('should reject registration completion if passwords do not match', async () => {
+      const res = await request(app)
+        .post('/api/v1/auth/complete-registration')
+        .send({
+          email: 'finalize_user@example.com',
+          verificationToken: validToken,
+          password: 'Password123!',
+          confirmPassword: 'MismatchPassword123!'
+        });
+
+      assert.strictEqual(res.status, 400);
+      assert.strictEqual(res.body.success, false);
+      assert.strictEqual(res.body.error.code, 'VALIDATION_ERROR');
+    });
+
+    it('should reject registration completion with invalid verificationToken', async () => {
+      const res = await request(app)
+        .post('/api/v1/auth/complete-registration')
+        .send({
+          email: 'finalize_user@example.com',
+          verificationToken: 'bogus-token-xyz',
+          password: 'Password123!',
+          confirmPassword: 'Password123!'
+        });
+
+      assert.strictEqual(res.status, 400);
+      assert.strictEqual(res.body.success, false);
+      assert.strictEqual(res.body.error.code, 'INVALID_VERIFICATION_SESSION');
+    });
+
+    it('should successfully complete registration, save user with phone, and clean up verification record', async () => {
+      const res = await request(app)
+        .post('/api/v1/auth/complete-registration')
+        .send({
+          email: 'finalize_user@example.com',
+          verificationToken: validToken,
+          password: 'Password123!',
+          confirmPassword: 'Password123!'
+        });
+
+      assert.strictEqual(res.status, 201);
+      assert.strictEqual(res.body.success, true);
+      assert.match(res.body.message, /Account created successfully/i);
+
+      // Verify user persisted in database with phone and isVerified=true
+      const user = await User.findOne({ email: 'finalize_user@example.com' });
+      assert.ok(user);
+      assert.strictEqual(user.name, 'Finalize Candidate');
+      assert.strictEqual(user.phone, '+91 9123456780');
+      assert.strictEqual(user.isVerified, true);
+
+      // Verify verification record was cleaned up
+      const ev = await EmailVerification.findOne({ email: 'finalize_user@example.com' });
+      assert.strictEqual(ev, null);
     });
   });
 

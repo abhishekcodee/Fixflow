@@ -137,7 +137,7 @@ export function Register() {
     } catch (err) {
       setFormError(
         err.message ||
-          'Failed to send verification code. Please verify your connection or SMTP settings.'
+        'Failed to send verification code. Please verify your connection or SMTP settings.'
       );
     } finally {
       setIsSubmitting(false);
@@ -464,9 +464,8 @@ export function Register() {
 
               <div className="auth-otp-meta-row">
                 <span
-                  className={`auth-timer-badge ${
-                    otpExpiresIn <= 60 ? 'auth-timer-badge--warning' : ''
-                  }`}
+                  className={`auth-timer-badge ${otpExpiresIn <= 60 ? 'auth-timer-badge--warning' : ''
+                    }`}
                 >
                   ⏱ Expires in: {formatTime(otpExpiresIn)}
                 </span>
@@ -480,8 +479,8 @@ export function Register() {
                   {isResending
                     ? 'Resending...'
                     : resendCooldown > 0
-                    ? `Resend Code (${resendCooldown}s)`
-                    : 'Resend Code'}
+                      ? `Resend Code (${resendCooldown}s)`
+                      : 'Resend Code'}
                 </button>
               </div>
 

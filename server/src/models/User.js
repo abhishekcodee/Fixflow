@@ -25,6 +25,7 @@ const attachMethods = (raw) => {
       _id: this.id,
       name: this.name,
       email: this.email,
+      phone: this.phone || null,
       role: this.role,
       avatarUrl: this.avatarUrl || null,
       githubId: this.githubId || null,
@@ -48,6 +49,7 @@ const attachMethods = (raw) => {
       data: {
         name: this.name,
         email: this.email ? this.email.toLowerCase().trim() : undefined,
+        phone: this.phone !== undefined ? (this.phone ? String(this.phone).trim() : null) : undefined,
         passwordHash: this.passwordHash || undefined,
         githubId: this.githubId || null,
         avatarUrl: this.avatarUrl || null,
@@ -101,6 +103,7 @@ export class User {
     if (query._id) where.id = String(query._id);
     else if (query.id) where.id = String(query.id);
     if (query.email) where.email = String(query.email).trim().toLowerCase();
+    if (query.phone) where.phone = String(query.phone).trim();
     if (query.githubId) where.githubId = String(query.githubId);
     if (query.role) where.role = query.role;
     if (query.isActive !== undefined) where.isActive = query.isActive;
@@ -110,6 +113,7 @@ export class User {
         const c = {};
         if (clause.id || clause._id) c.id = String(clause.id || clause._id);
         if (clause.email) c.email = String(clause.email).trim().toLowerCase();
+        if (clause.phone) c.phone = String(clause.phone).trim();
         if (clause.githubId) c.githubId = String(clause.githubId);
         return c;
       });
@@ -142,6 +146,7 @@ export class User {
     const createData = {
       name: data.name,
       email: data.email.toLowerCase().trim(),
+      phone: data.phone ? String(data.phone).trim() : null,
       passwordHash: data.passwordHash || null,
       githubId: data.githubId || null,
       avatarUrl: data.avatarUrl || null,

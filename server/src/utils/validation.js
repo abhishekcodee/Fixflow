@@ -3,6 +3,24 @@
  */
 
 const EMAIL_REGEX = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)+$/;
+const PHONE_REGEX = /^\+?[0-9\s\-()]{7,20}$/;
+
+/**
+ * Validates a mobile / telephone number format.
+ * @param {string} phone
+ * @returns {{ isValid: boolean, error?: string }}
+ */
+export const validatePhoneNumber = (phone) => {
+  if (!phone || typeof phone !== 'string' || !phone.trim()) {
+    return { isValid: false, error: 'Mobile number is required.' };
+  }
+  const cleanPhone = phone.trim();
+  const digitsOnly = cleanPhone.replace(/\D/g, '');
+  if (digitsOnly.length < 7 || digitsOnly.length > 15 || !PHONE_REGEX.test(cleanPhone)) {
+    return { isValid: false, error: 'Please enter a valid mobile number (7-15 digits).' };
+  }
+  return { isValid: true };
+};
 
 /**
  * Validates password strength policy:
@@ -31,10 +49,12 @@ export const validatePasswordPolicy = (password) => {
 /**
  * Validates registration payload.
  * Strictly ignores or rejects privileged roles.
+ * Supports Step 1 (user details) and legacy single-step payloads.
  * @param {object} data
+ * @param {object} [options]
  * @returns {{ isValid: boolean, errors: Array<{ field: string, issue: string }> }}
  */
-export const validateRegistrationInput = ({ name, email, password, role }) => {
+export const validateRegistrationInput = ({ name, email, phone, password, role }, options = {}) => {
   const errors = [];
 
   // Name validation
@@ -49,10 +69,49 @@ export const validateRegistrationInput = ({ name, email, password, role }) => {
     errors.push({ field: 'email', issue: 'Please provide a valid email address.' });
   }
 
-  // Password validation
+  // Phone validation (validated if provided or required)
+  if (phone !== undefined && phone !== null && String(phone).trim() !== '') {
+    const phoneVal = validatePhoneNumber(phone);
+    if (!phoneVal.isValid) {
+      errors.push({ field: 'phone', issue: phoneVal.error });
+    }
+  } else if (options.requirePhone) {
+    errors.push({ field: 'phone', issue: 'Mobile number is required.' });
+  }
+
+  // Password validation (validated if provided or required)
+  if (password !== undefined && password !== null) {
+    const pwdValidation = validatePasswordPolicy(password);
+    if (!pwdValidation.isValid) {
+      errors.push({ field: 'password', issue: pwdValidation.error });
+    }
+  } else if (options.requirePassword) {
+    errors.push({ field: 'password', issue: 'Password is required.' });
+  }
+
+  return {
+    isValid: errors.length === 0,
+    errors
+  };
+};
+
+/**
+ * Validates password setup & confirmation payload (Step 4 of registration).
+ * @param {object} data
+ * @returns {{ isValid: boolean, errors: Array<{ field: string, issue: string }> }}
+ */
+export const validatePasswordSetup = ({ password, confirmPassword }) => {
+  const errors = [];
+
   const pwdValidation = validatePasswordPolicy(password);
   if (!pwdValidation.isValid) {
     errors.push({ field: 'password', issue: pwdValidation.error });
+  }
+
+  if (!confirmPassword || typeof confirmPassword !== 'string' || !confirmPassword) {
+    errors.push({ field: 'confirmPassword', issue: 'Please confirm your password.' });
+  } else if (password !== confirmPassword) {
+    errors.push({ field: 'confirmPassword', issue: 'Passwords do not match.' });
   }
 
   return {
@@ -136,8 +195,10 @@ export const validateResetPasswordInput = ({ email, token, newPassword }) => {
 };
 
 export default {
+  validatePhoneNumber,
   validatePasswordPolicy,
   validateRegistrationInput,
+  validatePasswordSetup,
   validateLoginInput,
   validateOtpInput,
   validateForgotPasswordInput,
