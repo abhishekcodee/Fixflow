@@ -13,8 +13,8 @@ services:
     runtime: node
     plan: free
     region: oregon
-    buildCommand: npm install
-    startCommand: node server/src/server.js
+    buildCommand: npm install && npm --prefix server run prisma:generate
+    startCommand: npx prisma db push --schema=server/prisma/schema.prisma --accept-data-loss && node server/src/server.js
     healthCheckPath: /api/v1/health
     envVars:
       - key: NODE_ENV
