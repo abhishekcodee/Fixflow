@@ -14,6 +14,17 @@ jobs:
   build:
     name: Build & Test
     runs-on: ubuntu-latest
+
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: rootpassword
+          MYSQL_DATABASE: fixflow
+        ports:
+          - 3306:3306
+        options: --health-cmd="mysqladmin ping" --health-interval=10s --health-timeout=5s --health-retries=5
+
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
@@ -27,8 +38,16 @@ jobs:
     - name: Install dependencies
       run: npm install
 
+    - name: Push database schema
+      run: npx prisma db push --schema=server/prisma/schema.prisma
+      env:
+        DATABASE_URL: mysql://root:rootpassword@127.0.0.1:3306/fixflow
+
     - name: Build production bundle
       run: npm run build
 
     - name: Run test suite
       run: npm test
+      env:
+        DATABASE_URL: mysql://root:rootpassword@127.0.0.1:3306/fixflow
+        JWT_SECRET: fixflow_ci_test_jwt_secret_key_minimum_32_characters
