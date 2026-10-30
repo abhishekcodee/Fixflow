@@ -1,12 +1,13 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { complaintsApi } from '../services/api';
+import { complaintsApi, techniciansApi } from '../services/api';
 import { PageHeader } from '../components/common/PageHeader';
 import { Button } from '../components/common/Button';
 import { Card } from '../components/common/Card';
 import { Input } from '../components/common/Input';
 import { Select } from '../components/common/Select';
 import { Textarea } from '../components/common/Textarea';
+import { StatusBadge } from '../components/common/StatusBadge';
 import { ErrorState } from '../components/common/ErrorState';
 import { LocationPickerMap } from '../components/common/LocationPickerMap';
 import './CreateComplaint.css';
@@ -31,6 +32,45 @@ export function CreateComplaint() {
   const [fieldErrors, setFieldErrors] = useState({});
   const [formError, setFormError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Smart dispatch / matching technician state
+  const [matchingTechs, setMatchingTechs] = useState([]);
+  const [loadingMatching, setLoadingMatching] = useState(false);
+  const [matchingInfo, setMatchingInfo] = useState(null);
+
+  useEffect(() => {
+    let isCancelled = false;
+    async function fetchMatching() {
+      if (!formData.category) return;
+      setLoadingMatching(true);
+      try {
+        const res = await techniciansApi.getMatching({
+          category: formData.category,
+          latitude: formData.latitude,
+          longitude: formData.longitude,
+          limit: 3,
+        });
+        if (!isCancelled) {
+          setMatchingTechs(res.technicians || []);
+          setMatchingInfo({
+            requiredSpecialization: res.requiredSpecialization,
+          });
+        }
+      } catch {
+        if (!isCancelled) {
+          setMatchingTechs([]);
+        }
+      } finally {
+        if (!isCancelled) {
+          setLoadingMatching(false);
+        }
+      }
+    }
+    fetchMatching();
+    return () => {
+      isCancelled = true;
+    };
+  }, [formData.category, formData.latitude, formData.longitude]);
 
   function handleChange(field, value) {
     setFormData((prev) => ({ ...prev, [field]: value }));
@@ -180,6 +220,54 @@ export function CreateComplaint() {
                 helperText="Administrators verify and may calibrate priority upon dispatch."
                 required
               />
+            </div>
+
+            {/* Smart Dispatch Preview Box */}
+            <div className="matching-preview-box">
+              <div className="matching-preview-header">
+                <span className="matching-preview-title">
+                  ⚡ Smart Dispatch Matching:
+                </span>
+                <span className="matching-preview-spec">
+                  {matchingInfo?.requiredSpecialization
+                    ? `Mapped to ${matchingInfo.requiredSpecialization.toUpperCase()}`
+                    : 'Mapping to category specialty...'}
+                </span>
+              </div>
+              {loadingMatching ? (
+                <p className="matching-preview-empty">Searching verified specialists online...</p>
+              ) : matchingTechs.length > 0 ? (
+                <div className="matching-tech-list">
+                  {matchingTechs.map((tech) => (
+                    <div key={tech.id} className="matching-tech-card">
+                      <div className="matching-tech-avatar">
+                        {tech.name.charAt(0).toUpperCase()}
+                      </div>
+                      <div className="matching-tech-info">
+                        <div className="matching-tech-name-row">
+                          <strong>{tech.name}</strong>
+                          <StatusBadge status={tech.isAvailable ? 'available' : 'unavailable'} size="sm" />
+                          <StatusBadge status={tech.approvalStatus} size="sm" />
+                        </div>
+                        <div className="matching-tech-meta">
+                          <span>🎯 {tech.primarySpecialization}</span>
+                          {tech.experienceYears !== null && tech.experienceYears !== undefined && (
+                            <span>⭐ {tech.experienceYears}y exp</span>
+                          )}
+                          <span>📋 {tech.activeWorkload} active jobs</span>
+                          {tech.distanceKm !== undefined && (
+                            <span>📍 {tech.distanceKm} km away</span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="matching-preview-empty warning">
+                  ⚠️ No approved {matchingInfo?.requiredSpecialization || 'specialist'} is currently online. Your ticket will be dispatched immediately to our on-call facilities queue.
+                </p>
+              )}
             </div>
           </div>
 

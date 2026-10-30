@@ -31,6 +31,24 @@ const attachMethods = (raw) => {
       githubId: this.githubId || null,
       isActive: this.isActive,
       isVerified: this.isVerified,
+      identityStatus: this.identityStatus || 'unverified',
+      identityType: this.identityType || null,
+      identityNumberMasked: this.identityNumberMasked || null,
+      identityVerifiedAt: this.identityVerifiedAt || null,
+      technicianProfile: this.technicianProfile ? {
+        id: this.technicianProfile.id,
+        primarySpecialization: this.technicianProfile.primarySpecialization,
+        customSpecialization: this.technicianProfile.customSpecialization,
+        secondarySpecializations: this.technicianProfile.secondarySpecializations,
+        experienceYears: this.technicianProfile.experienceYears,
+        skills: this.technicianProfile.skills,
+        serviceArea: this.technicianProfile.serviceArea,
+        workingHours: this.technicianProfile.workingHours,
+        isAvailable: this.technicianProfile.isAvailable,
+        approvalStatus: this.technicianProfile.approvalStatus,
+        rejectionReason: this.technicianProfile.rejectionReason,
+        approvedAt: this.technicianProfile.approvedAt
+      } : null,
       createdAt: this.createdAt,
       updatedAt: this.updatedAt
     };
@@ -55,7 +73,16 @@ const attachMethods = (raw) => {
         avatarUrl: this.avatarUrl || null,
         role: this.role,
         isActive: this.isActive,
-        isVerified: this.isVerified
+        isVerified: this.isVerified,
+        identityStatus: this.identityStatus || undefined,
+        identityType: this.identityType !== undefined ? this.identityType : undefined,
+        identityNumberMasked: this.identityNumberMasked !== undefined ? this.identityNumberMasked : undefined,
+        identityHash: this.identityHash !== undefined ? this.identityHash : undefined,
+        identityVerifiedAt: this.identityVerifiedAt !== undefined ? this.identityVerifiedAt : undefined,
+        identityProviderRef: this.identityProviderRef !== undefined ? this.identityProviderRef : undefined
+      },
+      include: {
+        technicianProfile: true
       }
     });
     Object.assign(this, attachMethods(updated));
@@ -83,7 +110,10 @@ class UserQueryBuilder {
   }
 
   async exec() {
-    const user = await prisma.user.findFirst({ where: this._where });
+    const user = await prisma.user.findFirst({
+      where: this._where,
+      include: { technicianProfile: true }
+    });
     return attachMethods(user);
   }
 
@@ -133,7 +163,10 @@ export class User {
     if (query.isActive !== undefined) where.isActive = query.isActive;
     if (query.isVerified !== undefined) where.isVerified = query.isVerified;
 
-    const users = await prisma.user.findMany({ where });
+    const users = await prisma.user.findMany({
+      where,
+      include: { technicianProfile: true }
+    });
     const results = users.map(attachMethods);
 
     results.select = function () {
@@ -152,7 +185,13 @@ export class User {
       avatarUrl: data.avatarUrl || null,
       role: data.role || 'user',
       isActive: data.isActive !== undefined ? data.isActive : true,
-      isVerified: data.isVerified !== undefined ? data.isVerified : false
+      isVerified: data.isVerified !== undefined ? data.isVerified : false,
+      identityStatus: data.identityStatus || 'unverified',
+      identityType: data.identityType || null,
+      identityNumberMasked: data.identityNumberMasked || null,
+      identityHash: data.identityHash || null,
+      identityVerifiedAt: data.identityVerifiedAt || null,
+      identityProviderRef: data.identityProviderRef || null
     };
 
     if (data.id) {
@@ -162,7 +201,8 @@ export class User {
     }
 
     const created = await prisma.user.create({
-      data: createData
+      data: createData,
+      include: { technicianProfile: true }
     });
     return attachMethods(created);
   }
@@ -241,11 +281,30 @@ export class User {
       _id: this.id,
       name: this.name,
       email: this.email,
+      phone: this.phone || null,
       role: this.role,
       avatarUrl: this.avatarUrl || null,
       githubId: this.githubId || null,
       isActive: this.isActive,
       isVerified: this.isVerified,
+      identityStatus: this.identityStatus || 'unverified',
+      identityType: this.identityType || null,
+      identityNumberMasked: this.identityNumberMasked || null,
+      identityVerifiedAt: this.identityVerifiedAt || null,
+      technicianProfile: this.technicianProfile ? {
+        id: this.technicianProfile.id,
+        primarySpecialization: this.technicianProfile.primarySpecialization,
+        customSpecialization: this.technicianProfile.customSpecialization,
+        secondarySpecializations: this.technicianProfile.secondarySpecializations,
+        experienceYears: this.technicianProfile.experienceYears,
+        skills: this.technicianProfile.skills,
+        serviceArea: this.technicianProfile.serviceArea,
+        workingHours: this.technicianProfile.workingHours,
+        isAvailable: this.technicianProfile.isAvailable,
+        approvalStatus: this.technicianProfile.approvalStatus,
+        rejectionReason: this.technicianProfile.rejectionReason,
+        approvedAt: this.technicianProfile.approvedAt
+      } : null,
       createdAt: this.createdAt,
       updatedAt: this.updatedAt
     };

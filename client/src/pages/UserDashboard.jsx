@@ -114,7 +114,12 @@ export function UserDashboard() {
   return (
     <div className="dashboard-page">
       <PageHeader
-        title={`Welcome back, ${user?.name || 'Resident'}`}
+        title={
+          <div className="flex items-center gap-2 flex-wrap">
+            <span>Welcome back, {user?.name || 'Resident'}</span>
+            <StatusBadge status={user?.identityStatus || 'pending'} size="sm" />
+          </div>
+        }
         description="Monitor campus maintenance requests, technician assignments, and repair telemetry."
         actions={
           <Link to="/complaints/new">
@@ -125,6 +130,20 @@ export function UserDashboard() {
           </Link>
         }
       />
+
+      {user?.identityStatus !== 'verified' && (
+        <div className="identity-notice-banner">
+          <span className="identity-notice-icon">🛡️</span>
+          <div className="identity-notice-text">
+            <strong>Identity Verification:</strong> Your account identity status is currently{' '}
+            <span className="capitalize font-bold">{user?.identityStatus || 'pending'}</span>. Complete official verification in{' '}
+            <Link to="/settings" className="font-semibold underline">
+              Account Settings
+            </Link>{' '}
+            for priority dispatch and authenticated security badge access.
+          </div>
+        </div>
+      )}
 
       {/* Metrics Overview Grid (Stitch Spec) */}
       <div className="metrics-grid" role="region" aria-label="Operational Telemetry">
@@ -304,6 +323,7 @@ export function UserDashboard() {
                   <th>Category</th>
                   <th>Priority</th>
                   <th>Status</th>
+                  <th>Assigned Specialist</th>
                   <th>Location</th>
                   <th>Date</th>
                   <th>Action</th>
@@ -324,6 +344,22 @@ export function UserDashboard() {
                     </td>
                     <td>
                       <StatusBadge status={item.status} />
+                    </td>
+                    <td>
+                      {item.assignedTo ? (
+                        <div className="assigned-tech-cell">
+                          <span className="font-semibold text-xs text-primary">
+                            🔧 {item.assignedTo.name}
+                          </span>
+                          {item.assignedTo.technicianProfile?.primarySpecialization && (
+                            <span className="text-xs text-muted block capitalize">
+                              ({item.assignedTo.technicianProfile.primarySpecialization})
+                            </span>
+                          )}
+                        </div>
+                      ) : (
+                        <span className="text-muted text-xs">Awaiting Dispatch</span>
+                      )}
                     </td>
                     <td className="text-muted text-xs">
                       {item.location?.building ? `${item.location.building}, ${item.location.room}` : '—'}

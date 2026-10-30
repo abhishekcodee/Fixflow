@@ -80,3 +80,104 @@
     justify-content: center;
   }
 }
+
+/* Smart Dispatch Preview */
+.matching-preview-box {
+  margin-top: var(--spacing-4);
+  padding: var(--spacing-4);
+  background-color: var(--color-bg-subtle, #f8fafc);
+  border: 1px solid var(--color-border, #e2e8f0);
+  border-radius: var(--radius-md, 8px);
+}
+
+.matching-preview-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--spacing-3);
+  font-size: var(--font-size-xs, 12px);
+}
+
+.matching-preview-title {
+  font-weight: var(--font-weight-bold, 600);
+  color: var(--color-primary, #2563eb);
+}
+
+.matching-preview-spec {
+  font-weight: var(--font-weight-medium, 500);
+  color: var(--color-text-muted, #64748b);
+  background: var(--color-bg-alt, #edf2f7);
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+}
+
+.matching-preview-empty {
+  font-size: var(--font-size-sm, 13px);
+  color: var(--color-text-muted, #64748b);
+  margin: 0;
+  line-height: 1.4;
+}
+
+.matching-preview-empty.warning {
+  color: #b45309;
+  background: #fffbeb;
+  padding: var(--spacing-2) var(--spacing-3);
+  border-radius: var(--radius-sm, 4px);
+  border: 1px solid #fde68a;
+}
+
+.matching-tech-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-2);
+}
+
+.matching-tech-card {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-3);
+  background: #ffffff;
+  padding: var(--spacing-2) var(--spacing-3);
+  border: 1px solid var(--color-border, #e2e8f0);
+  border-radius: var(--radius-sm, 6px);
+}
+
+.matching-tech-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: #2563eb;
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  font-size: 13px;
+  flex-shrink: 0;
+}
+
+.matching-tech-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+}
+
+.matching-tech-name-row {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2);
+  font-size: var(--font-size-sm, 13px);
+  color: var(--color-text, #1e293b);
+  flex-wrap: wrap;
+}
+
+.matching-tech-meta {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-3);
+  font-size: 11px;
+  color: var(--color-text-muted, #64748b);
+  flex-wrap: wrap;
+}

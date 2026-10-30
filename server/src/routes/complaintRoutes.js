@@ -7,7 +7,8 @@ import {
   assignTechnician,
   updateComplaintStatus,
   getComplaintHistory,
-  submitFeedback
+  submitFeedback,
+  getMatchingTechniciansForComplaint
 } from '../controllers/complaintController.js';
 import { authenticate, authorize } from '../middleware/auth.js';
 
@@ -33,6 +34,7 @@ router.get('/', getComplaints);
  * @desc    Retrieve single complaint (Creator, Assigned Technician, or Admin)
  */
 router.get('/:id', getComplaintById);
+router.get('/:id/matching-technicians', getMatchingTechniciansForComplaint);
 
 /**
  * @route   PATCH /api/v1/complaints/:id

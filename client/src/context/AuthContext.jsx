@@ -103,6 +103,10 @@ export function AuthProvider({ children }) {
     throw new Error('GitHub authentication response was missing token or user data.');
   }, []);
 
+  const updateUser = useCallback((updatedUserData) => {
+    setUser((prev) => (prev ? { ...prev, ...updatedUserData } : updatedUserData));
+  }, []);
+
   const value = {
     user,
     token,
@@ -115,6 +119,7 @@ export function AuthProvider({ children }) {
     loginWithGithub,
     logout,
     setSession,
+    updateUser,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

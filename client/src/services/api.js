@@ -128,9 +128,42 @@ export const authApi = {
   getProfile: () => request('/auth/me', { method: 'GET' }),
   logout: () => request('/auth/logout', { method: 'POST' }),
   deleteAccount: (payload) => request('/auth/me', { method: 'DELETE', body: payload }),
+  verifyIdentity: (payload) => request('/auth/verify-identity', { method: 'POST', body: payload }),
   getTechnicians: () => request('/auth/technicians', { method: 'GET' }),
   getGithubConfig: () => request('/auth/github/config', { method: 'GET' }),
   githubLogin: (code) => request('/auth/github', { method: 'POST', body: { code } }),
+};
+
+export const techniciansApi = {
+  getMe: () => request('/technicians/me', { method: 'GET' }),
+  updateMe: (payload) => request('/technicians/me', { method: 'PATCH', body: payload }),
+  toggleAvailability: (isAvailable) => request('/technicians/availability', { method: 'PATCH', body: { isAvailable } }),
+  getMatching: (params = {}) => {
+    const query = new URLSearchParams();
+    Object.entries(params).forEach(([key, value]) => {
+      if (value !== undefined && value !== null && value !== '') {
+        query.append(key, value);
+      }
+    });
+    const queryString = query.toString();
+    return request(`/technicians/matching${queryString ? `?${queryString}` : ''}`, { method: 'GET' });
+  },
+};
+
+export const adminApi = {
+  getTechnicians: (params = {}) => {
+    const query = new URLSearchParams();
+    Object.entries(params).forEach(([key, value]) => {
+      if (value !== undefined && value !== null && value !== '') {
+        query.append(key, value);
+      }
+    });
+    const queryString = query.toString();
+    return request(`/admin/technicians${queryString ? `?${queryString}` : ''}`, { method: 'GET' });
+  },
+  updateTechnicianApproval: (id, payload) => request(`/admin/technicians/${id}/approval`, { method: 'PATCH', body: payload }),
+  getCategoryMappings: () => request('/admin/category-mappings', { method: 'GET' }),
+  updateCategoryMapping: (category, payload) => request(`/admin/category-mappings/${category}`, { method: 'PUT', body: payload }),
 };
 
 export const complaintsApi = {
@@ -145,6 +178,7 @@ export const complaintsApi = {
     return request(`/complaints${queryString ? `?${queryString}` : ''}`, { method: 'GET' });
   },
   getById: (id) => request(`/complaints/${id}`, { method: 'GET' }),
+  getMatchingTechnicians: (id) => request(`/complaints/${id}/matching-technicians`, { method: 'GET' }),
   create: (payload) => request('/complaints', { method: 'POST', body: payload }),
   update: (id, payload) => request(`/complaints/${id}`, { method: 'PATCH', body: payload }),
   assign: (id, payload) => request(`/complaints/${id}/assign`, { method: 'POST', body: payload }),

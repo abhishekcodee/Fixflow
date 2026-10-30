@@ -10,13 +10,45 @@ import { authApi } from '../services/api';
 import './Settings.css';
 
 export function Settings() {
-  const { user, logout } = useAuth();
+  const { user, logout, updateUser } = useAuth();
   const [showModal, setShowModal] = useState(false);
   const [confirmationText, setConfirmationText] = useState('');
   const [password, setPassword] = useState('');
   const [isDeleting, setIsDeleting] = useState(false);
   const [error, setError] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
+
+  // Identity Verification (Aadhaar) State
+  const [aadhaarInput, setAadhaarInput] = useState('');
+  const [isSubmittingAadhaar, setIsSubmittingAadhaar] = useState(false);
+  const [aadhaarError, setAadhaarError] = useState('');
+  const [aadhaarSuccess, setAadhaarSuccess] = useState('');
+
+  const handleVerifyAadhaar = async (e) => {
+    e.preventDefault();
+    setAadhaarError('');
+    setAadhaarSuccess('');
+
+    const clean = aadhaarInput.replace(/[\s-]/g, '');
+    if (clean.length !== 12 || !/^[2-9]\d{11}$/.test(clean)) {
+      setAadhaarError('Please enter a valid 12-digit Aadhaar number starting with 2-9.');
+      return;
+    }
+
+    setIsSubmittingAadhaar(true);
+    try {
+      const res = await authApi.verifyIdentity({ aadhaarNumber: clean });
+      setAadhaarSuccess(res.message || 'Identity verification submitted successfully.');
+      setAadhaarInput('');
+      if (updateUser && res.data?.user) {
+        updateUser(res.data.user);
+      }
+    } catch (err) {
+      setAadhaarError(err.message || 'Failed to submit identity verification.');
+    } finally {
+      setIsSubmittingAadhaar(false);
+    }
+  };
 
   const handleOpenModal = () => {
     setError('');
@@ -115,6 +147,96 @@ export function Settings() {
                 <span className="settings-status-pill settings-status-pill--active">Active</span>
               </span>
             </div>
+            {user?.role === 'technician' && user?.technicianProfile && (
+              <>
+                <div className="settings-profile-item">
+                  <span className="settings-label">Technician Specialization</span>
+                  <span className="settings-value" style={{ textTransform: 'capitalize', fontWeight: '600' }}>
+                    {user.technicianProfile.primarySpecialization}
+                  </span>
+                </div>
+                <div className="settings-profile-item">
+                  <span className="settings-label">Approval Status</span>
+                  <span className="settings-value">
+                    <StatusBadge status={user.technicianProfile.approvalStatus} />
+                  </span>
+                </div>
+              </>
+            )}
+          </div>
+        </Card>
+
+        {/* Identity Verification Card (Aadhaar) */}
+        <Card
+          className="settings-card"
+          title="Identity Verification (Aadhaar)"
+          subtitle="Government-compliant identity verification and verified trust badges"
+        >
+          <div style={{ padding: '4px 0' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px', flexWrap: 'wrap', gap: '8px' }}>
+              <div>
+                <span style={{ fontSize: '13px', color: '#64748b' }}>Current Verification Status: </span>
+                <StatusBadge status={user?.identityStatus || 'unverified'} />
+              </div>
+              {user?.identityNumberMasked && (
+                <div style={{ fontFamily: 'monospace', fontWeight: '600', color: '#1e3a8a', background: '#eff6ff', padding: '4px 10px', borderRadius: '6px', border: '1px solid #bfdbfe', fontSize: '13px' }}>
+                  Masked ID: {user.identityNumberMasked}
+                </div>
+              )}
+            </div>
+
+            {aadhaarSuccess && (
+              <div style={{ padding: '10px 14px', background: '#f0fdf4', border: '1px solid #86efac', borderRadius: '6px', color: '#166534', fontSize: '13px', marginBottom: '14px' }}>
+                ✓ {aadhaarSuccess}
+              </div>
+            )}
+
+            {aadhaarError && (
+              <div style={{ padding: '10px 14px', background: '#fef2f2', border: '1px solid #fca5a5', borderRadius: '6px', color: '#991b1b', fontSize: '13px', marginBottom: '14px' }}>
+                ⚠ {aadhaarError}
+              </div>
+            )}
+
+            {user?.identityStatus !== 'verified' ? (
+              <form onSubmit={handleVerifyAadhaar} style={{ background: '#f8fafc', padding: '16px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                <p style={{ margin: '0 0 12px 0', fontSize: '13px', color: '#475569', lineHeight: '1.5' }}>
+                  {user?.identityStatus === 'pending'
+                    ? 'Your identity verification is currently queued/pending administrative verification. You may re-submit with an updated 12-digit number below if needed:'
+                    : 'Submit your 12-digit Aadhaar number to obtain a verified identity badge. Number is securely hashed and masked; plaintext is never stored or exposed.'}
+                </p>
+                <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start', flexWrap: 'wrap' }}>
+                  <div style={{ flex: '1', minWidth: '220px' }}>
+                    <Input
+                      id="settings-aadhaar-input"
+                      name="aadhaar"
+                      type="text"
+                      placeholder="e.g. 5412 7890 1234"
+                      value={aadhaarInput}
+                      onChange={(e) => setAadhaarInput(e.target.value)}
+                      required
+                    />
+                  </div>
+                  <Button
+                    type="submit"
+                    variant="primary"
+                    isLoading={isSubmittingAadhaar}
+                    loadingText="Verifying..."
+                  >
+                    Submit Verification
+                  </Button>
+                </div>
+              </form>
+            ) : (
+              <div style={{ padding: '14px', background: '#f0fdf4', borderRadius: '8px', border: '1px solid #bbf7d0', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+                  <polyline points="22 4 12 14.01 9 11.01" />
+                </svg>
+                <span style={{ fontSize: '13px', color: '#166534', fontWeight: '500' }}>
+                  Your identity has been verified. Verified members receive prioritized maintenance dispatch and organizational access.
+                </span>
+              </div>
+            )}
           </div>
         </Card>
 

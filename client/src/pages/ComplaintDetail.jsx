@@ -329,6 +329,14 @@ export function ComplaintDetail() {
                 <div className="tech-meta">
                   <span className="tech-name">{complaint.assignedTo.name}</span>
                   <span className="tech-email">{complaint.assignedTo.email}</span>
+                  {complaint.assignedTo.phone && (
+                    <span className="tech-phone text-xs text-muted">📞 {complaint.assignedTo.phone}</span>
+                  )}
+                  {complaint.assignedTo.technicianProfile?.primarySpecialization && (
+                    <span className="tech-spec text-xs font-semibold text-primary capitalize">
+                      🎯 {complaint.assignedTo.technicianProfile.primarySpecialization} Specialist
+                    </span>
+                  )}
                   <span className="tech-badge">Assigned Technician</span>
                 </div>
               </div>

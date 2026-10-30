@@ -1,6 +1,7 @@
 import { Complaint } from '../models/Complaint.js';
 import { ComplaintHistory } from '../models/ComplaintHistory.js';
 import { User } from '../models/User.js';
+import { TechnicianProfile } from '../models/TechnicianProfile.js';
 import { getNextComplaintNumber } from '../models/Counter.js';
 import { AppError } from '../utils/AppError.js';
 import { filterComplaintsByRadius } from '../utils/geo.js';
@@ -385,6 +386,28 @@ export const assignTechnician = async (req, res, next) => {
       );
     }
 
+    // Verify technician specialization approval and availability
+    if (technician.technicianProfile) {
+      if (technician.technicianProfile.approvalStatus !== 'approved' && !req.body.forceOverride) {
+        return next(
+          new AppError(
+            `Technician ${technician.name} is not approved for work orders (Approval Status: "${technician.technicianProfile.approvalStatus}").`,
+            400,
+            'TECHNICIAN_NOT_APPROVED'
+          )
+        );
+      }
+      if (technician.technicianProfile.isAvailable === false && !req.body.forceOverride) {
+        return next(
+          new AppError(
+            `Technician ${technician.name} is currently marked as unavailable/offline.`,
+            400,
+            'TECHNICIAN_UNAVAILABLE'
+          )
+        );
+      }
+    }
+
     const previousAssigned = extractId(complaint.assignedTo);
     const previousStatus = complaint.status;
 
@@ -413,6 +436,45 @@ export const assignTechnician = async (req, res, next) => {
       message: `Complaint successfully assigned to technician ${technician.name}.`,
       data: {
         complaint: complaint.toSafeObject ? complaint.toSafeObject() : complaint
+      }
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+/**
+ * @route   GET /api/v1/complaints/:id/matching-technicians
+ * @desc    Get matching eligible technicians for a specific complaint
+ * @access  Authenticated
+ */
+export const getMatchingTechniciansForComplaint = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    if (!isValidObjectId(id)) {
+      return next(new AppError('Invalid complaint ID format.', 400, 'INVALID_IDENTIFIER'));
+    }
+
+    const complaint = await Complaint.findById(id);
+    if (!complaint) {
+      return next(new AppError('Complaint not found.', 404, 'COMPLAINT_NOT_FOUND'));
+    }
+
+    const technicians = await TechnicianProfile.findMatchingTechnicians({
+      category: complaint.category,
+      coordinates: complaint.latitude && complaint.longitude ? {
+        latitude: complaint.latitude,
+        longitude: complaint.longitude
+      } : null
+    });
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        complaintId: complaint._id,
+        category: complaint.category,
+        count: technicians.length,
+        technicians
       }
     });
   } catch (err) {
@@ -636,5 +698,6 @@ export default {
   assignTechnician,
   updateComplaintStatus,
   getComplaintHistory,
-  submitFeedback
+  submitFeedback,
+  getMatchingTechniciansForComplaint
 };

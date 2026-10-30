@@ -371,3 +371,33 @@
     padding: var(--spacing-2) var(--spacing-3);
   }
 }
+
+
+/* Identity Verification Notice Banner */
+.identity-notice-banner {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-3);
+  padding: var(--spacing-3) var(--spacing-4);
+  background-color: #fefce8;
+  border: 1px solid #fef08a;
+  border-radius: var(--radius-md, 8px);
+  margin-bottom: var(--spacing-4);
+}
+
+.identity-notice-icon {
+  font-size: 20px;
+  flex-shrink: 0;
+}
+
+.identity-notice-text {
+  font-size: var(--font-size-sm, 13px);
+  color: #854d0e;
+  line-height: 1.4;
+}
+
+.assigned-tech-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}

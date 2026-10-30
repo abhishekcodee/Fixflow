@@ -7,6 +7,8 @@ import { env } from './config/env.js';
 import healthRoutes from './routes/healthRoutes.js';
 import authRoutes from './routes/authRoutes.js';
 import complaintRoutes from './routes/complaintRoutes.js';
+import technicianRoutes from './routes/technicianRoutes.js';
+import adminRoutes from './routes/adminRoutes.js';
 import notFound from './middleware/notFound.js';
 import errorHandler from './middleware/errorHandler.js';
 
@@ -78,6 +80,8 @@ app.get('/', (req, res, next) => {
 app.use('/api/v1/health', healthRoutes);
 app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/complaints', complaintRoutes);
+app.use('/api/v1/technicians', technicianRoutes);
+app.use('/api/v1/admin', adminRoutes);
 
 // 6. Serve static client bundle in production if built dist directory exists
 const clientDistPath = path.resolve('dist');

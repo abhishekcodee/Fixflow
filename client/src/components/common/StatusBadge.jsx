@@ -8,6 +8,16 @@ const STATUS_CONFIG = {
   resolved: { label: 'Resolved', className: 'badge--status-resolved' },
   closed: { label: 'Closed', className: 'badge--status-closed' },
   rejected: { label: 'Rejected', className: 'badge--status-rejected' },
+  // Technician Approval & Verification Statuses
+  approved: { label: 'Approved', className: 'badge--status-resolved' },
+  pending_approval: { label: 'Pending Approval', className: 'badge--status-on-hold' },
+  pending_verification: { label: 'Pending Verification', className: 'badge--status-on-hold' },
+  suspended: { label: 'Suspended', className: 'badge--status-rejected' },
+  verified: { label: 'Identity Verified', className: 'badge--status-resolved' },
+  unverified: { label: 'Unverified', className: 'badge--neutral' },
+  pending: { label: 'Verification Pending', className: 'badge--status-on-hold' },
+  available: { label: 'Online / Available', className: 'badge--status-resolved' },
+  unavailable: { label: 'Offline / Busy', className: 'badge--neutral' },
 };
 
 const PRIORITY_CONFIG = {

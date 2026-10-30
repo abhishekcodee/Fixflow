@@ -1,6 +1,9 @@
 import { User } from '../models/User.js';
 import { EmailVerification } from '../models/EmailVerification.js';
 import { PasswordReset } from '../models/PasswordReset.js';
+import { TechnicianProfile } from '../models/TechnicianProfile.js';
+import { CategoryMapping } from '../models/CategoryMapping.js';
+import identityService from '../services/identityService.js';
 import { AppError } from '../utils/AppError.js';
 import { signToken, generateNumericOtp } from '../utils/token.js';
 import {
@@ -36,7 +39,19 @@ const isTestEnv = () => {
  */
 export const sendOtp = async (req, res, next) => {
   try {
-    const { name, email, phone, password, role = 'user' } = req.body;
+    const {
+      name,
+      email,
+      phone,
+      password,
+      role = 'user',
+      specialization,
+      primarySpecialization,
+      customSpecialization,
+      experienceYears,
+      serviceArea,
+      aadhaarNumber
+    } = req.body;
 
     // Validate registration input
     const validation = validateRegistrationInput({ name, email, phone, password, role });
@@ -49,6 +64,29 @@ export const sendOtp = async (req, res, next) => {
     const assignedRole = role === 'technician' ? 'technician' : 'user';
     const normalizedEmail = email.trim().toLowerCase();
     const cleanPhone = phone ? String(phone).trim() : null;
+
+    // Aadhaar format validation if provided during registration
+    let pendingAadhaarMasked = null;
+    let pendingAadhaarHash = null;
+    if (aadhaarNumber) {
+      if (!identityService.isValidAadhaarFormat(aadhaarNumber)) {
+        return next(
+          new AppError('Invalid Aadhaar number format. Aadhaar must be a 12-digit number.', 400, 'INVALID_AADHAAR_FORMAT')
+        );
+      }
+      pendingAadhaarMasked = identityService.maskAadhaar(aadhaarNumber);
+      pendingAadhaarHash = identityService.hashIdentityNumber(aadhaarNumber);
+
+      // Check if another verified user already registered this Aadhaar
+      const duplicateIdentity = await prisma.user.findFirst({
+        where: { identityHash: pendingAadhaarHash }
+      });
+      if (duplicateIdentity) {
+        return next(
+          new AppError('An account with this identity record already exists.', 409, 'IDENTITY_ALREADY_EXISTS')
+        );
+      }
+    }
 
     // Check if an already verified user exists with this email
     const existingUser = await User.findOne({ email: normalizedEmail });
@@ -104,6 +142,12 @@ export const sendOtp = async (req, res, next) => {
         pendingPhone: cleanPhone,
         pendingPasswordHash,
         pendingRole: assignedRole,
+        pendingSpecialization: primarySpecialization || specialization || (assignedRole === 'technician' ? 'general' : null),
+        pendingCustomSpecialization: customSpecialization || null,
+        pendingExperience: experienceYears ? parseInt(experienceYears, 10) : 0,
+        pendingServiceArea: serviceArea || null,
+        pendingAadhaarMasked,
+        pendingAadhaarHash,
         verificationToken: null,
         attempts: 0,
         lastResendAt: new Date(),
@@ -195,6 +239,27 @@ export const verifyOtp = async (req, res, next) => {
     // If password was already staged (legacy 1-step tests)
     if (pendingRecord.pendingPasswordHash) {
       const assignedRole = pendingRecord.pendingRole || 'user';
+      let identityStatus = 'unverified';
+      let identityType = null;
+      let identityNumberMasked = null;
+      let identityHash = null;
+      let identityVerifiedAt = null;
+      let identityProviderRef = null;
+
+      if (pendingRecord.pendingAadhaarHash) {
+        identityType = 'aadhaar';
+        identityNumberMasked = pendingRecord.pendingAadhaarMasked;
+        identityHash = pendingRecord.pendingAadhaarHash;
+        if (process.env.NODE_ENV === 'test' && process.env.MOCK_AADHAAR_VERIFIED === 'true') {
+          identityStatus = 'verified';
+          identityVerifiedAt = new Date();
+          identityProviderRef = `MOCK_REG_${Date.now()}`;
+        } else {
+          identityStatus = 'pending';
+          identityProviderRef = `PENDING_REG_${Date.now()}`;
+        }
+      }
+
       let user = await User.findOne({ email: normalizedEmail });
       if (user) {
         user.name = pendingRecord.pendingName;
@@ -203,6 +268,14 @@ export const verifyOtp = async (req, res, next) => {
         user.role = assignedRole;
         user.isActive = true;
         user.isVerified = true;
+        if (identityHash) {
+          user.identityStatus = identityStatus;
+          user.identityType = identityType;
+          user.identityNumberMasked = identityNumberMasked;
+          user.identityHash = identityHash;
+          user.identityVerifiedAt = identityVerifiedAt;
+          user.identityProviderRef = identityProviderRef;
+        }
         await user.save();
       } else {
         user = await User.create({
@@ -212,8 +285,26 @@ export const verifyOtp = async (req, res, next) => {
           passwordHash: pendingRecord.pendingPasswordHash,
           role: assignedRole,
           isActive: true,
-          isVerified: true
+          isVerified: true,
+          identityStatus,
+          identityType,
+          identityNumberMasked,
+          identityHash,
+          identityVerifiedAt,
+          identityProviderRef
         });
+      }
+
+      if (assignedRole === 'technician') {
+        await TechnicianProfile.upsert(user.id, {
+          primarySpecialization: pendingRecord.pendingSpecialization || 'general',
+          customSpecialization: pendingRecord.pendingCustomSpecialization || null,
+          experienceYears: pendingRecord.pendingExperience || 0,
+          serviceArea: pendingRecord.pendingServiceArea || 'General Campus',
+          isAvailable: true,
+          approvalStatus: identityStatus === 'verified' ? 'pending_approval' : 'pending_verification'
+        });
+        user = await User.findById(user.id);
       }
 
       await EmailVerification.deleteOne({ _id: pendingRecord._id });
@@ -306,16 +397,56 @@ export const completeRegistration = async (req, res, next) => {
     // Hash password securely with bcrypt
     const passwordHash = await User.hashPassword(password);
 
+    // Identity verification parameters from pending stage
+    let identityStatus = 'unverified';
+    let identityType = null;
+    let identityNumberMasked = null;
+    let identityHash = null;
+    let identityVerifiedAt = null;
+    let identityProviderRef = null;
+
+    if (pendingRecord.pendingAadhaarHash) {
+      identityType = 'aadhaar';
+      identityNumberMasked = pendingRecord.pendingAadhaarMasked;
+      identityHash = pendingRecord.pendingAadhaarHash;
+      if (process.env.NODE_ENV === 'test' && process.env.MOCK_AADHAAR_VERIFIED === 'true') {
+        identityStatus = 'verified';
+        identityVerifiedAt = new Date();
+        identityProviderRef = `MOCK_REG_${Date.now()}`;
+      } else {
+        identityStatus = 'pending';
+        identityProviderRef = `PENDING_REG_${Date.now()}`;
+      }
+    }
+
     // Save verified user in TiDB Cloud database
-    const user = await User.create({
+    let user = await User.create({
       name: pendingRecord.pendingName,
       email: normalizedEmail,
       phone: pendingRecord.pendingPhone || null,
       passwordHash,
       role: pendingRecord.pendingRole || 'user',
       isActive: true,
-      isVerified: true
+      isVerified: true,
+      identityStatus,
+      identityType,
+      identityNumberMasked,
+      identityHash,
+      identityVerifiedAt,
+      identityProviderRef
     });
+
+    if (pendingRecord.pendingRole === 'technician') {
+      await TechnicianProfile.upsert(user.id, {
+        primarySpecialization: pendingRecord.pendingSpecialization || 'general',
+        customSpecialization: pendingRecord.pendingCustomSpecialization || null,
+        experienceYears: pendingRecord.pendingExperience || 0,
+        serviceArea: pendingRecord.pendingServiceArea || 'General Campus',
+        isAvailable: true,
+        approvalStatus: identityStatus === 'verified' ? 'pending_approval' : 'pending_verification'
+      });
+      user = await User.findById(user.id);
+    }
 
     // Invalidate the used verification record
     await EmailVerification.deleteOne({ _id: pendingRecord._id });
@@ -370,7 +501,7 @@ export const register = async (req, res, next) => {
       }
 
       const passwordHash = await User.hashPassword(password);
-      const newUser = await User.create({
+      let newUser = await User.create({
         name: name.trim(),
         email: normalizedEmail,
         passwordHash,
@@ -378,6 +509,18 @@ export const register = async (req, res, next) => {
         isActive: true,
         isVerified: true
       });
+
+      if (assignedRole === 'technician') {
+        await TechnicianProfile.upsert(newUser.id, {
+          primarySpecialization: req.body.primarySpecialization || req.body.specialization || 'general',
+          customSpecialization: req.body.customSpecialization || null,
+          experienceYears: req.body.experienceYears || 0,
+          serviceArea: req.body.serviceArea || 'General Campus',
+          isAvailable: true,
+          approvalStatus: 'approved'
+        });
+        newUser = await User.findById(newUser.id);
+      }
 
       const token = signToken(newUser);
       return res.status(201).json({
@@ -1011,6 +1154,394 @@ export const deleteAccount = async (req, res, next) => {
   }
 };
 
+/**
+ * @route   POST /api/v1/auth/verify-identity
+ * @desc    Submit identity verification (Aadhaar number)
+ * @access  Authenticated
+ */
+export const verifyIdentity = async (req, res, next) => {
+  try {
+    const { aadhaarNumber } = req.body;
+    if (!aadhaarNumber) {
+      return next(new AppError('Aadhaar number is required.', 400, 'VALIDATION_ERROR'));
+    }
+
+    if (!identityService.isValidAadhaarFormat(aadhaarNumber)) {
+      return next(
+        new AppError('Invalid Aadhaar number format. Aadhaar must be a 12-digit number.', 400, 'INVALID_AADHAAR_FORMAT')
+      );
+    }
+
+    const identityHash = identityService.hashIdentityNumber(aadhaarNumber);
+
+    // Prevent two different accounts from claiming the exact same Aadhaar
+    const existing = await prisma.user.findFirst({
+      where: {
+        identityHash,
+        id: { not: req.user.id }
+      }
+    });
+    if (existing) {
+      return next(
+        new AppError('This identity document has already been registered with another account.', 409, 'IDENTITY_ALREADY_EXISTS')
+      );
+    }
+
+    const result = await identityService.verifyIdentityWithProvider({
+      aadhaarNumber,
+      name: req.user.name,
+      userId: req.user.id
+    });
+
+    // Update user record
+    const updatedUser = await prisma.user.update({
+      where: { id: req.user.id },
+      data: {
+        identityStatus: result.status,
+        identityType: 'aadhaar',
+        identityNumberMasked: result.maskedNumber,
+        identityHash: result.identityHash,
+        identityVerifiedAt: result.verifiedAt,
+        identityProviderRef: result.providerRef
+      },
+      include: {
+        technicianProfile: true
+      }
+    });
+
+    // If user is technician and now verified, update approvalStatus to pending_approval if it was pending_verification
+    if (updatedUser.role === 'technician' && updatedUser.technicianProfile) {
+      if (result.status === 'verified' && updatedUser.technicianProfile.approvalStatus === 'pending_verification') {
+        await prisma.technicianProfile.update({
+          where: { userId: updatedUser.id },
+          data: { approvalStatus: 'pending_approval' }
+        });
+      }
+    }
+
+    const safeUser = (await User.findById(req.user.id)).toSafeObject();
+
+    return res.status(200).json({
+      success: true,
+      message: result.message,
+      data: {
+        user: safeUser,
+        verification: {
+          status: result.status,
+          maskedNumber: result.maskedNumber,
+          providerRef: result.providerRef,
+          verifiedAt: result.verifiedAt
+        }
+      }
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+/**
+ * @route   GET /api/v1/technicians/me
+ * @desc    Get logged in technician profile and work order statistics
+ * @access  Authenticated (Technician, Admin)
+ */
+export const getTechnicianProfileMe = async (req, res, next) => {
+  try {
+    const userId = req.user.id;
+    let profile = await TechnicianProfile.findByUserId(userId);
+
+    if (!profile) {
+      profile = await TechnicianProfile.upsert(userId, {
+        primarySpecialization: 'general',
+        isAvailable: true,
+        approvalStatus: req.user.role === 'admin' ? 'approved' : 'pending_approval'
+      });
+      profile = await TechnicianProfile.findByUserId(userId);
+    }
+
+    const activeJobs = await prisma.complaint.findMany({
+      where: {
+        assignedToId: userId,
+        status: { in: ['assigned', 'in_progress', 'on_hold'] }
+      },
+      orderBy: { updatedAt: 'desc' }
+    });
+
+    const completedJobsCount = await prisma.complaint.count({
+      where: {
+        assignedToId: userId,
+        status: { in: ['resolved', 'closed'] }
+      }
+    });
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        profile,
+        stats: {
+          activeWorkOrders: activeJobs.length,
+          completedWorkOrders: completedJobsCount
+        },
+        activeWorkOrders: activeJobs
+      }
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+/**
+ * @route   PATCH /api/v1/technicians/me
+ * @desc    Update technician specialization, skills, and service area
+ * @access  Authenticated (Technician)
+ */
+export const updateTechnicianProfileMe = async (req, res, next) => {
+  try {
+    const userId = req.user.id;
+    const {
+      primarySpecialization,
+      customSpecialization,
+      experienceYears,
+      skills,
+      serviceArea,
+      workingHours
+    } = req.body;
+
+    const updated = await TechnicianProfile.upsert(userId, {
+      primarySpecialization,
+      customSpecialization,
+      experienceYears,
+      skills,
+      serviceArea,
+      workingHours
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: 'Technician profile updated successfully.',
+      data: { profile: updated }
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+/**
+ * @route   PATCH /api/v1/technicians/availability
+ * @desc    Toggle technician online / offline availability
+ * @access  Authenticated (Technician)
+ */
+export const toggleTechnicianAvailability = async (req, res, next) => {
+  try {
+    const userId = req.user.id;
+    const { isAvailable } = req.body;
+
+    if (typeof isAvailable !== 'boolean') {
+      return next(new AppError('isAvailable must be a boolean (true or false).', 400, 'VALIDATION_ERROR'));
+    }
+
+    const updated = await TechnicianProfile.setAvailability(userId, isAvailable);
+
+    return res.status(200).json({
+      success: true,
+      message: `Technician availability updated to ${isAvailable ? 'Available (Online)' : 'Unavailable (Offline)'}.`,
+      data: { profile: updated }
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+/**
+ * @route   GET /api/v1/technicians/matching
+ * @desc    Query eligible technicians matching a complaint category
+ * @access  Public / Authenticated
+ */
+export const getMatchingTechnicians = async (req, res, next) => {
+  try {
+    const { category, specialization, lat, lng, limit } = req.query;
+
+    const coordinates = (lat && lng && !isNaN(parseFloat(lat)) && !isNaN(parseFloat(lng))) ? {
+      latitude: parseFloat(lat),
+      longitude: parseFloat(lng)
+    } : null;
+
+    const technicians = await TechnicianProfile.findMatchingTechnicians({
+      category: category ? String(category).trim().toLowerCase() : undefined,
+      requiredSpecialization: specialization ? String(specialization).trim().toLowerCase() : undefined,
+      coordinates,
+      limit: limit ? parseInt(limit, 10) : 15
+    });
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        count: technicians.length,
+        technicians
+      }
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+/**
+ * @route   GET /api/v1/admin/technicians
+ * @desc    Admin technician directory with approval status and workload
+ * @access  Admin only
+ */
+export const getAdminTechnicians = async (req, res, next) => {
+  try {
+    const { status, search, specialization } = req.query;
+
+    const where = {
+      role: 'technician'
+    };
+
+    if (search && String(search).trim()) {
+      const q = String(search).trim();
+      where.OR = [
+        { name: { contains: q } },
+        { email: { contains: q } },
+        { phone: { contains: q } }
+      ];
+    }
+
+    const technicians = await prisma.user.findMany({
+      where,
+      include: {
+        technicianProfile: true,
+        assignedComplaints: {
+          where: { status: { in: ['assigned', 'in_progress', 'on_hold'] } },
+          select: { id: true, status: true }
+        }
+      },
+      orderBy: { createdAt: 'desc' }
+    });
+
+    let filtered = technicians.map((t) => ({
+      id: t.id,
+      _id: t.id,
+      name: t.name,
+      email: t.email,
+      phone: t.phone,
+      role: t.role,
+      isActive: t.isActive,
+      identityStatus: t.identityStatus,
+      identityNumberMasked: t.identityNumberMasked,
+      profile: t.technicianProfile || {
+        primarySpecialization: 'general',
+        approvalStatus: 'pending_approval',
+        isAvailable: true,
+        experienceYears: 0,
+        serviceArea: 'General Campus'
+      },
+      activeWorkload: t.assignedComplaints ? t.assignedComplaints.length : 0,
+      createdAt: t.createdAt
+    }));
+
+    if (status && status !== 'all') {
+      filtered = filtered.filter((t) => t.profile.approvalStatus === status);
+    }
+    if (specialization && specialization !== 'all') {
+      filtered = filtered.filter((t) => t.profile.primarySpecialization === specialization);
+    }
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        total: filtered.length,
+        technicians: filtered
+      }
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+/**
+ * @route   PATCH /api/v1/admin/technicians/:id/approval
+ * @desc    Admin approval management (approve, reject, suspend)
+ * @access  Admin only
+ */
+export const updateTechnicianApproval = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { approvalStatus, rejectionReason } = req.body;
+
+    if (!approvalStatus) {
+      return next(new AppError('approvalStatus is required.', 400, 'VALIDATION_ERROR'));
+    }
+
+    const targetUser = await User.findById(id);
+    if (!targetUser || targetUser.role !== 'technician') {
+      return next(new AppError('Target technician not found.', 404, 'TECHNICIAN_NOT_FOUND'));
+    }
+
+    // Ensure profile exists
+    await TechnicianProfile.upsert(targetUser.id, {
+      primarySpecialization: 'general'
+    });
+
+    const updated = await TechnicianProfile.setApprovalStatus(targetUser.id, {
+      approvalStatus,
+      rejectionReason,
+      approvedById: req.user.id
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: `Technician status updated to "${approvalStatus}".`,
+      data: { profile: updated }
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+/**
+ * @route   GET /api/v1/admin/category-mappings
+ * @desc    List all category-to-specialization mappings
+ * @access  Authenticated
+ */
+export const getCategoryMappings = async (req, res, next) => {
+  try {
+    const mappings = await CategoryMapping.getAll();
+    return res.status(200).json({
+      success: true,
+      data: { mappings }
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+/**
+ * @route   PUT /api/v1/admin/category-mappings/:category
+ * @desc    Update category-to-specialization mapping
+ * @access  Admin only
+ */
+export const updateCategoryMapping = async (req, res, next) => {
+  try {
+    const { category } = req.params;
+    const { label, primarySpecialization, secondarySpecializations, description } = req.body;
+
+    const updated = await CategoryMapping.updateMapping(category, {
+      label,
+      primarySpecialization,
+      secondarySpecializations,
+      description
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: `Category mapping for "${category}" updated successfully.`,
+      data: { mapping: updated }
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
 export default {
   sendOtp,
   verifyOtp,
@@ -1024,5 +1555,14 @@ export default {
   getTechnicians,
   getGithubConfig,
   githubLogin,
-  deleteAccount
+  deleteAccount,
+  verifyIdentity,
+  getTechnicianProfileMe,
+  updateTechnicianProfileMe,
+  toggleTechnicianAvailability,
+  getMatchingTechnicians,
+  getAdminTechnicians,
+  updateTechnicianApproval,
+  getCategoryMappings,
+  updateCategoryMapping
 };

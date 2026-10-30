@@ -10,6 +10,7 @@ import {
   getMe,
   logout,
   deleteAccount,
+  verifyIdentity,
   getTechnicians,
   getGithubConfig,
   githubLogin
@@ -41,6 +42,7 @@ router.post('/github', githubLogin);
  */
 router.get('/me', authenticate, getMe);
 router.delete('/me', authenticate, deleteAccount);
+router.post('/verify-identity', authenticate, verifyIdentity);
 
 /**
  * Technician Listing (Admin only)

@@ -3,10 +3,26 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { authApi } from '../services/api';
 import { Input } from '../components/common/Input';
+import { Select } from '../components/common/Select';
 import { Button } from '../components/common/Button';
 import { Card } from '../components/common/Card';
 import { ErrorState } from '../components/common/ErrorState';
 import './Auth.css';
+
+const TECHNICIAN_SPECIALIZATION_OPTIONS = [
+  { value: 'electrician', label: 'Electrician' },
+  { value: 'plumber', label: 'Plumber' },
+  { value: 'hvac', label: 'HVAC / AC Technician' },
+  { value: 'carpenter', label: 'Carpenter' },
+  { value: 'painter', label: 'Painter' },
+  { value: 'civil', label: 'Civil Maintenance Technician' },
+  { value: 'appliance', label: 'Appliance Repair Technician' },
+  { value: 'elevator', label: 'Lift / Elevator Technician' },
+  { value: 'fire_safety', label: 'Fire Safety Technician' },
+  { value: 'network', label: 'IT / Network Technician' },
+  { value: 'general', label: 'General Maintenance Technician' },
+  { value: 'other', label: 'Other (Specify Below)' }
+];
 
 export function Register() {
   // Step: 1 = Enter Info & Send OTP, 2 = Verify OTP & Create Account
@@ -18,6 +34,11 @@ export function Register() {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [role, setRole] = useState('user'); // 'user' or 'technician'
+  const [specialization, setSpecialization] = useState('electrician');
+  const [customSpecialization, setCustomSpecialization] = useState('');
+  const [experienceYears, setExperienceYears] = useState('2');
+  const [serviceArea, setServiceArea] = useState('');
+  const [aadhaarNumber, setAadhaarNumber] = useState('');
   const [otp, setOtp] = useState('');
 
   // Status & Feedback States
@@ -96,6 +117,19 @@ export function Register() {
       errors.confirmPassword = 'Passwords do not match.';
     }
 
+    if (role === 'technician') {
+      if (specialization === 'other' && !customSpecialization.trim()) {
+        errors.customSpecialization = 'Please specify your technician specialization.';
+      }
+    }
+
+    if (aadhaarNumber.trim()) {
+      const cleanAadhaar = aadhaarNumber.replace(/[\s-]/g, '');
+      if (cleanAadhaar.length !== 12 || !/^[2-9]\d{11}$/.test(cleanAadhaar)) {
+        errors.aadhaarNumber = 'Aadhaar must be a 12-digit number starting with 2-9.';
+      }
+    }
+
     setFieldErrors(errors);
     return Object.keys(errors).length === 0;
   }
@@ -115,6 +149,12 @@ export function Register() {
         email: email.trim(),
         password,
         role,
+        specialization: role === 'technician' ? specialization : undefined,
+        primarySpecialization: role === 'technician' ? specialization : undefined,
+        customSpecialization: role === 'technician' && specialization === 'other' ? customSpecialization.trim() : undefined,
+        experienceYears: role === 'technician' ? parseInt(experienceYears || '0', 10) : undefined,
+        serviceArea: role === 'technician' && serviceArea.trim() ? serviceArea.trim() : undefined,
+        aadhaarNumber: aadhaarNumber.trim() ? aadhaarNumber.trim() : undefined,
       });
 
       setStep(2);
@@ -409,6 +449,97 @@ export function Register() {
                   </span>
                 </div>
               )}
+
+              {/* Technician Specialization Step */}
+              {role === 'technician' && (
+                <div className="auth-technician-section" style={{ marginTop: '16px', padding: '16px', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                  <div style={{ marginBottom: '12px' }}>
+                    <h4 style={{ margin: '0 0 4px 0', fontSize: '14px', fontWeight: '600', color: '#0f172a' }}>
+                      Technician Specialization
+                    </h4>
+                    <p style={{ margin: 0, fontSize: '12px', color: '#64748b' }}>
+                      What type of technician are you? FixFlow automatically routes matched maintenance complaints to your queue.
+                    </p>
+                  </div>
+
+                  <Select
+                    id="register-specialization"
+                    name="specialization"
+                    label="What type of technician are you?"
+                    value={specialization}
+                    onChange={(e) => setSpecialization(e.target.value)}
+                    options={TECHNICIAN_SPECIALIZATION_OPTIONS}
+                    required
+                  />
+
+                  {specialization === 'other' && (
+                    <div style={{ marginTop: '12px' }}>
+                      <Input
+                        id="register-custom-specialization"
+                        name="customSpecialization"
+                        type="text"
+                        label="Specify Your Skill"
+                        placeholder="e.g. Solar Inverter Specialist"
+                        value={customSpecialization}
+                        onChange={(e) => setCustomSpecialization(e.target.value)}
+                        error={fieldErrors.customSpecialization}
+                        required
+                      />
+                    </div>
+                  )}
+
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginTop: '12px' }}>
+                    <Input
+                      id="register-experience"
+                      name="experienceYears"
+                      type="number"
+                      min="0"
+                      max="50"
+                      label="Years of Experience"
+                      value={experienceYears}
+                      onChange={(e) => setExperienceYears(e.target.value)}
+                    />
+                    <Input
+                      id="register-service-area"
+                      name="serviceArea"
+                      type="text"
+                      label="Service Area / Zone"
+                      placeholder="e.g. Campus Zone A"
+                      value={serviceArea}
+                      onChange={(e) => setServiceArea(e.target.value)}
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* Identity Verification Section (Aadhaar) */}
+              <div className="auth-identity-section" style={{ marginTop: '16px', padding: '16px', background: '#eff6ff', borderRadius: '8px', border: '1px solid #bfdbfe' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#2563eb" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                    <path d="m9 12 2 2 4-4"/>
+                  </svg>
+                  <span style={{ fontSize: '13px', fontWeight: '600', color: '#1e40af' }}>
+                    Identity Verification (Aadhaar)
+                  </span>
+                </div>
+                <Input
+                  id="register-aadhaar"
+                  name="aadhaarNumber"
+                  type="text"
+                  label="12-Digit Aadhaar Number"
+                  placeholder="e.g. 5412 7890 1234 (Optional during registration)"
+                  value={aadhaarNumber}
+                  onChange={(e) => setAadhaarNumber(e.target.value)}
+                  error={fieldErrors.aadhaarNumber}
+                  helperText="Your Aadhaar is securely masked (XXXX-XXXX-1234) and hashed before verification; plaintext is never stored or exposed."
+                />
+                {aadhaarNumber.replace(/[\s-]/g, '').length === 12 && (
+                  <div style={{ marginTop: '6px', fontSize: '12px', color: '#166534', fontWeight: '500' }}>
+                    ✓ Masked Display: XXXX-XXXX-{aadhaarNumber.replace(/[\s-]/g, '').slice(-4)}
+                  </div>
+                )}
+              </div>
 
               <Button
                 type="submit"

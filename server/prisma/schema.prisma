@@ -9,24 +9,35 @@ generator client {
 }
 
 model User {
-  id           String    @id @default(uuid())
-  name         String    @db.VarChar(60)
-  email        String    @unique @db.VarChar(191)
-  phone        String?   @unique @db.VarChar(30)
-  passwordHash String?   @db.VarChar(255)
-  githubId     String?   @unique @db.VarChar(191)
-  avatarUrl    String?   @db.Text
-  role         String    @default("user") @db.VarChar(20)
-  isActive     Boolean   @default(true)
-  isVerified   Boolean   @default(false)
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
+  id                  String    @id @default(uuid())
+  name                String    @db.VarChar(60)
+  email               String    @unique @db.VarChar(191)
+  phone               String?   @unique @db.VarChar(30)
+  passwordHash        String?   @db.VarChar(255)
+  githubId            String?   @unique @db.VarChar(191)
+  avatarUrl           String?   @db.Text
+  role                String    @default("user") @db.VarChar(20)
+  isActive            Boolean   @default(true)
+  isVerified          Boolean   @default(false)
+  
+  // Identity verification (Aadhaar / ID Card)
+  identityStatus      String    @default("unverified") @db.VarChar(30) // unverified, pending, verified, rejected
+  identityType        String?   @db.VarChar(30) // aadhaar, pan, passport
+  identityNumberMasked String?  @db.VarChar(30) // e.g. XXXX-XXXX-1234
+  identityHash        String?   @db.VarChar(255) // SHA-256 hash for duplicate check without plaintext storage
+  identityVerifiedAt  DateTime?
+  identityProviderRef String?   @db.VarChar(100)
 
-  createdComplaints  Complaint[]        @relation("ComplaintCreator")
-  assignedComplaints Complaint[]        @relation("ComplaintTechnician")
-  historyActions     ComplaintHistory[] @relation("HistoryActor")
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+
+  createdComplaints   Complaint[]        @relation("ComplaintCreator")
+  assignedComplaints  Complaint[]        @relation("ComplaintTechnician")
+  historyActions      ComplaintHistory[] @relation("HistoryActor")
+  technicianProfile   TechnicianProfile?
 
   @@index([role])
+  @@index([identityStatus])
 }
 
 model Complaint {
@@ -90,19 +101,25 @@ model ComplaintHistory {
 }
 
 model EmailVerification {
-  id                  String   @id @default(uuid())
-  email               String   @unique @db.VarChar(191)
-  otpHash             String   @db.VarChar(255)
-  pendingName         String   @db.VarChar(60)
-  pendingPhone        String?  @db.VarChar(30)
-  pendingPasswordHash String?  @db.VarChar(255)
-  pendingRole         String   @default("user") @db.VarChar(20)
-  verificationToken   String?  @db.VarChar(255)
-  attempts            Int      @default(0)
-  lastResendAt        DateTime @default(now())
-  expiresAt           DateTime
-  createdAt           DateTime @default(now())
-  updatedAt           DateTime @updatedAt
+  id                          String   @id @default(uuid())
+  email                       String   @unique @db.VarChar(191)
+  otpHash                     String   @db.VarChar(255)
+  pendingName                 String   @db.VarChar(60)
+  pendingPhone                String?  @db.VarChar(30)
+  pendingPasswordHash         String?  @db.VarChar(255)
+  pendingRole                 String   @default("user") @db.VarChar(20)
+  pendingSpecialization       String?  @db.VarChar(60)
+  pendingCustomSpecialization String?  @db.VarChar(100)
+  pendingExperience           Int?
+  pendingServiceArea          String?  @db.VarChar(100)
+  pendingAadhaarMasked        String?  @db.VarChar(30)
+  pendingAadhaarHash          String?  @db.VarChar(255)
+  verificationToken           String?  @db.VarChar(255)
+  attempts                    Int      @default(0)
+  lastResendAt                DateTime @default(now())
+  expiresAt                   DateTime
+  createdAt                   DateTime @default(now())
+  updatedAt                   DateTime @updatedAt
 
   @@index([expiresAt])
 }
@@ -124,4 +141,38 @@ model PasswordReset {
 model Counter {
   id  String @id
   seq Int    @default(0)
+}
+
+model TechnicianProfile {
+  id                       String    @id @default(uuid())
+  userId                   String    @unique
+  user                     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  primarySpecialization    String    @db.VarChar(60)
+  customSpecialization     String?   @db.VarChar(100)
+  secondarySpecializations Json?
+  experienceYears          Int       @default(0)
+  skills                   String?   @db.Text
+  serviceArea              String?   @db.VarChar(100)
+  workingHours             String?   @db.VarChar(100)
+  isAvailable              Boolean   @default(true)
+  approvalStatus           String    @default("pending_approval") @db.VarChar(30) // pending_verification, pending_approval, approved, rejected, suspended
+  rejectionReason          String?   @db.Text
+  approvedAt               DateTime?
+  approvedById             String?
+  createdAt                DateTime  @default(now())
+  updatedAt                DateTime  @updatedAt
+
+  @@index([approvalStatus, isAvailable])
+  @@index([primarySpecialization])
+}
+
+model CategoryMapping {
+  id                       String   @id @default(uuid())
+  category                 String   @unique @db.VarChar(50)
+  label                    String   @db.VarChar(100)
+  primarySpecialization    String   @db.VarChar(60)
+  secondarySpecializations Json?
+  description              String?  @db.VarChar(255)
+  createdAt                DateTime @default(now())
+  updatedAt                DateTime @updatedAt
 }

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { complaintsApi } from '../services/api';
+import { complaintsApi, techniciansApi } from '../services/api';
 import { PageHeader } from '../components/common/PageHeader';
 import { Button } from '../components/common/Button';
 import { Card } from '../components/common/Card';
@@ -18,8 +18,27 @@ export function TechnicianDashboard() {
   const isTechnician = user?.role === 'technician' || user?.role === 'admin';
 
   const [workOrders, setWorkOrders] = useState([]);
+  const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [profileLoading, setProfileLoading] = useState(false);
+  const [togglingAvailability, setTogglingAvailability] = useState(false);
   const [error, setError] = useState(null);
+  const [activeTab, setActiveTab] = useState('all');
+  const [actionLoadingId, setActionLoadingId] = useState(null);
+
+  async function loadProfile() {
+    setProfileLoading(true);
+    try {
+      const res = await techniciansApi.getMe();
+      if (res?.profile) {
+        setProfile(res.profile);
+      }
+    } catch {
+      // Profile might not exist yet if admin
+    } finally {
+      setProfileLoading(false);
+    }
+  }
 
   async function loadWorkOrders(isBackground = false) {
     if (!isBackground) {
@@ -42,6 +61,7 @@ export function TechnicianDashboard() {
 
   useEffect(() => {
     if (isTechnician) {
+      loadProfile();
       loadWorkOrders();
 
       const intervalId = setInterval(() => {
@@ -59,6 +79,37 @@ export function TechnicianDashboard() {
       setLoading(false);
     }
   }, [isTechnician]);
+
+  async function handleToggleAvailability() {
+    if (!profile) return;
+    setTogglingAvailability(true);
+    try {
+      const updated = await techniciansApi.toggleAvailability();
+      setProfile((prev) => ({
+        ...prev,
+        isAvailable: updated?.profile?.isAvailable ?? !prev.isAvailable,
+      }));
+    } catch (err) {
+      alert(err.message || 'Failed to update availability');
+    } finally {
+      setTogglingAvailability(false);
+    }
+  }
+
+  async function handleQuickStatusUpdate(complaintId, nextStatus) {
+    setActionLoadingId(complaintId);
+    try {
+      await complaintsApi.updateStatus(complaintId, {
+        status: nextStatus,
+        comment: `Technician updated status to ${nextStatus.replace('_', ' ')} from quick dispatch console.`,
+      });
+      await loadWorkOrders(true);
+    } catch (err) {
+      alert(err.message || 'Failed to update ticket status');
+    } finally {
+      setActionLoadingId(null);
+    }
+  }
 
   if (!isTechnician) {
     return (
@@ -89,6 +140,14 @@ export function TechnicianDashboard() {
   const onHoldOrders = workOrders.filter((w) => w.status === 'on_hold');
   const resolvedOrders = workOrders.filter((w) => ['resolved', 'closed'].includes(w.status));
 
+  const filteredOrders = workOrders.filter((w) => {
+    if (activeTab === 'in_progress') return w.status === 'in_progress';
+    if (activeTab === 'assigned') return w.status === 'assigned';
+    if (activeTab === 'on_hold') return w.status === 'on_hold';
+    if (activeTab === 'resolved') return ['resolved', 'closed'].includes(w.status);
+    return true;
+  });
+
   return (
     <div className="tech-page">
       <PageHeader
@@ -102,21 +161,77 @@ export function TechnicianDashboard() {
         }
       />
 
+      {/* Technician Profile & Dispatch Status Card */}
+      {profile && (
+        <Card className="tech-profile-card">
+          <div className="tech-profile-header">
+            <div className="tech-profile-details">
+              <div className="tech-avatar-circle">
+                {user?.name?.charAt(0)?.toUpperCase() || 'T'}
+              </div>
+              <div className="tech-info-col">
+                <div className="tech-name-row">
+                  <h3 className="tech-name">{user?.name}</h3>
+                  <StatusBadge status={user?.identityStatus || 'pending'} size="sm" />
+                  <StatusBadge status={profile.approvalStatus || 'pending_approval'} size="sm" />
+                </div>
+                <div className="tech-specs-row">
+                  <span className="tech-primary-spec">
+                    🔧 {profile.primarySpecialization?.toUpperCase() || 'GENERAL'}
+                    {profile.customSpecialization ? ` (${profile.customSpecialization})` : ''}
+                  </span>
+                  {profile.experienceYears !== null && profile.experienceYears !== undefined && (
+                    <span className="tech-spec-tag">⭐ {profile.experienceYears} Years Experience</span>
+                  )}
+                  {profile.serviceArea && (
+                    <span className="tech-spec-tag">📍 Zone: {profile.serviceArea}</span>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <div className="tech-availability-controls">
+              <div className="availability-status-label">
+                <span className="tech-metric-card__label">Dispatch Status:</span>
+                <span className={`availability-text ${profile.isAvailable ? 'text-success' : 'text-muted'}`}>
+                  {profile.isAvailable ? '🟢 Online & Ready' : '⚪ Offline / Resting'}
+                </span>
+              </div>
+              <Button
+                variant={profile.isAvailable ? 'secondary' : 'primary'}
+                size="sm"
+                onClick={handleToggleAvailability}
+                isLoading={togglingAvailability}
+              >
+                {profile.isAvailable ? 'Switch to Offline' : 'Go Available Online'}
+              </Button>
+            </div>
+          </div>
+
+          {profile.approvalStatus !== 'approved' && (
+            <div className="tech-approval-banner">
+              ⚠️ <strong>Account Verification in Progress:</strong> Your profile is currently{' '}
+              <span className="capitalize font-bold">{profile.approvalStatus?.replace('_', ' ')}</span>. You will be matched to automatic work orders as soon as campus administration finalizes verification.
+            </div>
+          )}
+        </Card>
+      )}
+
       {/* Technician Metric Summary */}
       <div className="tech-metrics-grid">
-        <Card className="tech-metric-card">
+        <Card className="tech-metric-card" onClick={() => setActiveTab('in_progress')}>
           <span className="tech-metric-card__label">Active (In Progress)</span>
           <span className="tech-metric-card__value text-warning">{inProgressOrders.length}</span>
         </Card>
-        <Card className="tech-metric-card">
+        <Card className="tech-metric-card" onClick={() => setActiveTab('assigned')}>
           <span className="tech-metric-card__label">Awaiting Start (Assigned)</span>
           <span className="tech-metric-card__value">{assignedOrders.length}</span>
         </Card>
-        <Card className="tech-metric-card">
+        <Card className="tech-metric-card" onClick={() => setActiveTab('on_hold')}>
           <span className="tech-metric-card__label">On Hold</span>
           <span className="tech-metric-card__value">{onHoldOrders.length}</span>
         </Card>
-        <Card className="tech-metric-card">
+        <Card className="tech-metric-card" onClick={() => setActiveTab('resolved')}>
           <span className="tech-metric-card__label">Completed (Resolved)</span>
           <span className="tech-metric-card__value text-success">{resolvedOrders.length}</span>
         </Card>
@@ -131,12 +246,50 @@ export function TechnicianDashboard() {
         userRole={user?.role}
       />
 
-      {/* Active Work Orders Table */}
+      {/* Active Work Orders Table with Status Tabs */}
       <Card
         title="Assigned Work Orders"
         subtitle="Current work order queue under your assignment"
         className="tech-queue-card"
       >
+        <div className="tech-tabs-bar">
+          <button
+            type="button"
+            className={`tech-tab-btn ${activeTab === 'all' ? 'active' : ''}`}
+            onClick={() => setActiveTab('all')}
+          >
+            All Orders ({workOrders.length})
+          </button>
+          <button
+            type="button"
+            className={`tech-tab-btn ${activeTab === 'assigned' ? 'active' : ''}`}
+            onClick={() => setActiveTab('assigned')}
+          >
+            Assigned ({assignedOrders.length})
+          </button>
+          <button
+            type="button"
+            className={`tech-tab-btn ${activeTab === 'in_progress' ? 'active' : ''}`}
+            onClick={() => setActiveTab('in_progress')}
+          >
+            In Progress ({inProgressOrders.length})
+          </button>
+          <button
+            type="button"
+            className={`tech-tab-btn ${activeTab === 'on_hold' ? 'active' : ''}`}
+            onClick={() => setActiveTab('on_hold')}
+          >
+            On Hold ({onHoldOrders.length})
+          </button>
+          <button
+            type="button"
+            className={`tech-tab-btn ${activeTab === 'resolved' ? 'active' : ''}`}
+            onClick={() => setActiveTab('resolved')}
+          >
+            Resolved ({resolvedOrders.length})
+          </button>
+        </div>
+
         {loading && <LoadingState message="Fetching assigned work orders..." />}
 
         {!loading && error && (
@@ -147,15 +300,15 @@ export function TechnicianDashboard() {
           />
         )}
 
-        {!loading && !error && workOrders.length === 0 && (
+        {!loading && !error && filteredOrders.length === 0 && (
           <EmptyState
-            title="No work orders assigned"
-            description="You currently have no maintenance complaints assigned to your technician profile."
+            title="No matching work orders"
+            description="You currently have no maintenance complaints in this status category."
             icon={<WrenchIcon size={32} />}
           />
         )}
 
-        {!loading && !error && workOrders.length > 0 && (
+        {!loading && !error && filteredOrders.length > 0 && (
           <div className="table-responsive">
             <table className="data-table">
               <thead>
@@ -166,11 +319,12 @@ export function TechnicianDashboard() {
                   <th>Priority</th>
                   <th>Status</th>
                   <th>Location</th>
+                  <th>Quick Actions</th>
                   <th>Action</th>
                 </tr>
               </thead>
               <tbody>
-                {workOrders.map((item) => (
+                {filteredOrders.map((item) => (
                   <tr key={item._id}>
                     <td className="font-mono">{item.complaintNumber}</td>
                     <td className="font-medium">{item.title}</td>
@@ -185,9 +339,56 @@ export function TechnicianDashboard() {
                       {item.location?.building}, Fl {item.location?.floor}, Unit {item.location?.roomOrUnit || item.location?.room}
                     </td>
                     <td>
+                      <div className="tech-quick-actions">
+                        {item.status === 'assigned' && (
+                          <Button
+                            variant="primary"
+                            size="sm"
+                            isLoading={actionLoadingId === item._id}
+                            onClick={() => handleQuickStatusUpdate(item._id, 'in_progress')}
+                          >
+                            Start Work
+                          </Button>
+                        )}
+                        {item.status === 'in_progress' && (
+                          <>
+                            <Button
+                              variant="secondary"
+                              size="sm"
+                              isLoading={actionLoadingId === item._id}
+                              onClick={() => handleQuickStatusUpdate(item._id, 'on_hold')}
+                            >
+                              Hold
+                            </Button>
+                            <Button
+                              variant="success"
+                              size="sm"
+                              isLoading={actionLoadingId === item._id}
+                              onClick={() => handleQuickStatusUpdate(item._id, 'resolved')}
+                            >
+                              Resolve
+                            </Button>
+                          </>
+                        )}
+                        {item.status === 'on_hold' && (
+                          <Button
+                            variant="primary"
+                            size="sm"
+                            isLoading={actionLoadingId === item._id}
+                            onClick={() => handleQuickStatusUpdate(item._id, 'in_progress')}
+                          >
+                            Resume
+                          </Button>
+                        )}
+                        {['resolved', 'closed'].includes(item.status) && (
+                          <span className="text-xs text-muted">Completed</span>
+                        )}
+                      </div>
+                    </td>
+                    <td>
                       <Link to={`/complaints/${item._id}`}>
-                        <Button variant="primary" size="sm">
-                          Inspect & Update
+                        <Button variant="ghost" size="sm">
+                          Inspect
                         </Button>
                       </Link>
                     </td>

@@ -46,6 +46,21 @@ export const validatePasswordPolicy = (password) => {
   return { isValid: true };
 };
 
+export const VALID_SPECIALIZATIONS = [
+  'electrician',
+  'plumber',
+  'hvac',
+  'carpenter',
+  'painter',
+  'civil',
+  'appliance',
+  'elevator',
+  'fire_safety',
+  'network',
+  'general',
+  'other'
+];
+
 /**
  * Validates registration payload.
  * Strictly ignores or rejects privileged roles.
@@ -54,7 +69,8 @@ export const validatePasswordPolicy = (password) => {
  * @param {object} [options]
  * @returns {{ isValid: boolean, errors: Array<{ field: string, issue: string }> }}
  */
-export const validateRegistrationInput = ({ name, email, phone, password, role }, options = {}) => {
+export const validateRegistrationInput = (data = {}, options = {}) => {
+  const { name, email, phone, password, role, primarySpecialization, specialization, identityNumber } = data;
   const errors = [];
 
   // Name validation
@@ -87,6 +103,22 @@ export const validateRegistrationInput = ({ name, email, phone, password, role }
     }
   } else if (options.requirePassword) {
     errors.push({ field: 'password', issue: 'Password is required.' });
+  }
+
+  // Technician specialization validation
+  const spec = primarySpecialization || specialization;
+  if (role === 'technician') {
+    if (!spec || !VALID_SPECIALIZATIONS.includes(spec)) {
+      errors.push({ field: 'primarySpecialization', issue: 'Please select a valid primary specialization.' });
+    }
+  }
+
+  // Identity / Aadhaar number format validation if provided
+  if (identityNumber) {
+    const digitsOnly = String(identityNumber).replace(/[\s-]/g, '');
+    if (!/^[2-9]\d{11}$/.test(digitsOnly)) {
+      errors.push({ field: 'identityNumber', issue: 'Aadhaar must be a valid 12-digit number.' });
+    }
   }
 
   return {
