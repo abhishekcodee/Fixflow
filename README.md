@@ -93,6 +93,10 @@ Detailed specifications and architectural decisions are documented in the [`docs
 
 ## 🚀 Key Features
 
+- **Aadhaar Identity Verification & Encrypted Vault:** Full workflow for citizens and technicians with zero plaintext storage, masked UI (`XXXX-XXXX-1234`), deterministic HMAC SHA-256 deduplication, front & back card image upload with AES-256-CBC at-rest encryption, and UIDAI OTP verification support.
+- **Admin Verification Queue & Decrypted Card Viewer:** Dedicated administrative review panel with real-time status filtering, side-by-side decrypted card inspection modal, and approve/reject governance.
+- **Smart Technician Matching & Specialization Management:** Category-to-skill matching matrix and one-click dispatch assigning qualified technicians to complaints.
+- **Secure Account Deletion with Data Retention:** Compliant account deletion allowing users to close accounts with typed confirmation while preserving complaint history via anonymization.
 - **OTP-Based Registration Flow:** 5-step registration architecture with secure 6-digit numeric OTP sent via Gmail SMTP, verification token issuance, password validation, and direct persistence in TiDB Cloud.
 - **Incident & Complaint Lifecycle:** Automatic complaint numbering (`FIX-YYYYMM-XXXX`), priority scoring, technician dispatching, status transitions (`submitted` ➔ `assigned` ➔ `in_progress` ➔ `resolved` ➔ `closed`), and audit history trail.
 - **Role-Based Access Control (RBAC):** Dedicated workflows for `user` (resident/staff), `technician`, and `admin`.
