@@ -127,6 +127,7 @@ export const authApi = {
   resetPassword: (payload) => request('/auth/reset-password', { method: 'POST', body: payload }),
   getProfile: () => request('/auth/me', { method: 'GET' }),
   logout: () => request('/auth/logout', { method: 'POST' }),
+  deleteAccount: (payload) => request('/auth/me', { method: 'DELETE', body: payload }),
   getTechnicians: () => request('/auth/technicians', { method: 'GET' }),
   getGithubConfig: () => request('/auth/github/config', { method: 'GET' }),
   githubLogin: (code) => request('/auth/github', { method: 'POST', body: { code } }),

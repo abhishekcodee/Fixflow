@@ -9,6 +9,7 @@ import {
   resetPassword,
   getMe,
   logout,
+  deleteAccount,
   getTechnicians,
   getGithubConfig,
   githubLogin
@@ -30,15 +31,16 @@ router.post('/forgot-password', forgotPassword);
 router.post('/reset-password', resetPassword);
 
 /**
- * GitHub OAuth 2.0 Routes
+ * GitHub OAuth Authentication Routes
  */
 router.get('/github/config', getGithubConfig);
 router.post('/github', githubLogin);
 
 /**
- * Protected Identity Route
+ * Protected Identity Route & Account Deletion
  */
 router.get('/me', authenticate, getMe);
+router.delete('/me', authenticate, deleteAccount);
 
 /**
  * Technician Listing (Admin only)

@@ -13,6 +13,7 @@ import { ComplaintDetail } from '../pages/ComplaintDetail';
 import { CreateComplaint } from '../pages/CreateComplaint';
 import { AdminDashboard } from '../pages/AdminDashboard';
 import { TechnicianDashboard } from '../pages/TechnicianDashboard';
+import { Settings } from '../pages/Settings';
 import { GitHubCallback } from '../pages/GitHubCallback';
 import { NotFound } from '../pages/NotFound';
 
@@ -97,6 +98,7 @@ export function AppRoutes() {
         <Route path="/complaints/:id" element={<ComplaintDetail />} />
         <Route path="/admin" element={<AdminDashboard />} />
         <Route path="/technician" element={<TechnicianDashboard />} />
+        <Route path="/settings" element={<Settings />} />
       </Route>
 
       {/* 404 Fallback */}

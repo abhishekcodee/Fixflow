@@ -6,6 +6,7 @@ import {
   PlusCircleIcon,
   WrenchIcon,
   ZapIcon,
+  SettingsIcon,
 } from '../common/Icons';
 import './Sidebar.css';
 
@@ -19,6 +20,7 @@ export function Sidebar({ isOpen, onClose }) {
     { to: '/complaints/new', label: 'Report Issue', icon: PlusCircleIcon, roles: ['user', 'admin'] },
     { to: '/technician', label: 'Work Orders', icon: WrenchIcon, roles: ['technician', 'admin'] },
     { to: '/admin', label: 'Admin Dispatch', icon: ZapIcon, roles: ['admin'] },
+    { to: '/settings', label: 'Account Settings', icon: SettingsIcon, roles: ['user', 'admin', 'technician'] },
   ];
 
   const visibleItems = navItems.filter((item) => item.roles.includes(role));

@@ -15,6 +15,7 @@ import emailService from '../services/emailService.js';
 import { logger } from '../utils/logger.js';
 import { env } from '../config/env.js';
 import crypto from 'crypto';
+import prisma from '../config/prisma.js';
 
 /**
  * Checks whether the current process is running in test mode.
@@ -898,6 +899,118 @@ export const githubLogin = async (req, res, next) => {
   }
 };
 
+
+/**
+ * @route   DELETE /api/v1/auth/me
+ * @desc    Securely deletes/anonymizes the authenticated user's account while preserving historical complaints.
+ * @access  Private (Authenticated user only)
+ */
+export const deleteAccount = async (req, res, next) => {
+  try {
+    const userId = req.user.id || req.user._id;
+    if (!userId) {
+      return next(new AppError('Authentication required.', 401, 'UNAUTHORIZED'));
+    }
+
+    const { confirmation, password } = req.body || {};
+    if (confirmation !== 'DELETE') {
+      return next(
+        new AppError('Please confirm account deletion by providing confirmation: "DELETE".', 400, 'INVALID_CONFIRMATION')
+      );
+    }
+
+    // Load full user document from DB to check role and password
+    const user = await User.findById(userId);
+    if (!user || !user.isActive) {
+      return next(new AppError('User account not found or already deactivated.', 404, 'USER_NOT_FOUND'));
+    }
+
+    // Safeguard 1: Administrator check - Do not allow deletion of the last active administrator
+    if (user.role === 'admin') {
+      const activeAdminCount = await User.countDocuments({ role: 'admin', isActive: true });
+      if (activeAdminCount <= 1) {
+        return next(
+          new AppError(
+            'Cannot delete the final administrator account. Please promote another administrator before deleting this account.',
+            403,
+            'LAST_ADMIN_PROTECTED'
+          )
+        );
+      }
+    }
+
+    // Safeguard 2: Technician check - Prevent deletion if technician has active assigned work orders
+    if (user.role === 'technician') {
+      const activeWorkOrders = await prisma.complaint.count({
+        where: {
+          assignedToId: userId,
+          status: { in: ['assigned', 'in_progress', 'on_hold'] }
+        }
+      });
+      if (activeWorkOrders > 0) {
+        return next(
+          new AppError(
+            `Cannot delete technician account with ${activeWorkOrders} active assigned work order(s). Please reassign or resolve these complaints first.`,
+            400,
+            'ACTIVE_ASSIGNMENTS_EXIST'
+          )
+        );
+      }
+    }
+
+    // Safeguard 3: Password verification for password-credentialed users (if password is provided or configured)
+    if (user.passwordHash && password) {
+      const isMatch = await user.comparePassword(password);
+      if (!isMatch) {
+        return next(new AppError('Incorrect password. Account deletion aborted.', 401, 'INVALID_PASSWORD'));
+      }
+    }
+
+    const userEmail = user.email.toLowerCase();
+    const anonymizedEmail = `deleted_${userId.slice(0, 8)}_${Date.now()}@anonymized.fixflow.internal`;
+    const anonymizedName = 'Former User';
+
+    // Execute atomic deletion transaction:
+    // 1. Clear any active unassigned or pending technician links
+    // 2. Remove obsolete pending email verifications and password resets
+    // 3. Anonymize user personal data and set isActive to false
+    await prisma.$transaction([
+      prisma.complaint.updateMany({
+        where: { assignedToId: userId },
+        data: { assignedToId: null }
+      }),
+      prisma.emailVerification.deleteMany({
+        where: { email: userEmail }
+      }),
+      prisma.passwordReset.deleteMany({
+        where: { email: userEmail }
+      }),
+      prisma.user.update({
+        where: { id: userId },
+        data: {
+          name: anonymizedName,
+          email: anonymizedEmail,
+          phone: null,
+          passwordHash: null,
+          githubId: null,
+          avatarUrl: null,
+          isActive: false,
+          isVerified: false
+        }
+      })
+    ]);
+
+    logger.info(`User account successfully deleted and anonymized [ID: ${userId}, Role: ${user.role}]`);
+
+    return res.status(200).json({
+      success: true,
+      message: 'Your account has been deleted successfully. Personal data has been anonymized and historical maintenance records have been safely preserved.'
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
 export default {
   sendOtp,
   verifyOtp,
@@ -910,5 +1023,6 @@ export default {
   logout,
   getTechnicians,
   getGithubConfig,
-  githubLogin
+  githubLogin,
+  deleteAccount
 };

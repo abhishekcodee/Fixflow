@@ -52,6 +52,7 @@ model Complaint {
   createdBy           User      @relation("ComplaintCreator", fields: [createdById], references: [id], onDelete: Cascade)
   assignedToId        String?
   assignedTo          User?     @relation("ComplaintTechnician", fields: [assignedToId], references: [id], onDelete: SetNull)
+  assignedAt          DateTime?
 
   // Resolution fields
   resolutionNotes     String?   @db.Text
