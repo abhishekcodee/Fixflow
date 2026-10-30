@@ -21,8 +21,9 @@ export function AuthProvider({ children }) {
 
       try {
         const response = await authApi.getProfile();
-        if (mounted && response?.user) {
-          setUser(response.user);
+        const profileUser = response?.user || response?.data?.user;
+        if (mounted && profileUser) {
+          setUser(profileUser);
         }
       } catch {
         // Token invalid or expired: clear stale credentials
@@ -45,12 +46,16 @@ export function AuthProvider({ children }) {
 
   const login = useCallback(async (email, password) => {
     setError(null);
-    const data = await authApi.login({ email, password });
-    if (data?.token && data?.user) {
-      localStorage.setItem('fixflow_token', data.token);
-      setToken(data.token);
-      setUser(data.user);
-      return data.user;
+    const res = await authApi.login({ email, password });
+    const payload = res?.data || res;
+    const authToken = payload?.token || res?.token;
+    const authUser = payload?.user || res?.user;
+
+    if (authToken && authUser) {
+      localStorage.setItem('fixflow_token', authToken);
+      setToken(authToken);
+      setUser(authUser);
+      return authUser;
     }
     throw new Error('Authentication response was missing token or user data.');
   }, []);
@@ -66,12 +71,16 @@ export function AuthProvider({ children }) {
 
   const register = useCallback(async (name, email, password) => {
     setError(null);
-    const data = await authApi.register({ name, email, password });
-    if (data?.token && data?.user) {
-      localStorage.setItem('fixflow_token', data.token);
-      setToken(data.token);
-      setUser(data.user);
-      return data.user;
+    const res = await authApi.register({ name, email, password });
+    const payload = res?.data || res;
+    const authToken = payload?.token || res?.token;
+    const authUser = payload?.user || res?.user;
+
+    if (authToken && authUser) {
+      localStorage.setItem('fixflow_token', authToken);
+      setToken(authToken);
+      setUser(authUser);
+      return authUser;
     }
     throw new Error('Registration response was missing token or user data.');
   }, []);
@@ -93,12 +102,16 @@ export function AuthProvider({ children }) {
 
   const loginWithGithub = useCallback(async (code) => {
     setError(null);
-    const data = await authApi.githubLogin(code);
-    if (data?.token && data?.user) {
-      localStorage.setItem('fixflow_token', data.token);
-      setToken(data.token);
-      setUser(data.user);
-      return data.user;
+    const res = await authApi.githubLogin(code);
+    const payload = res?.data || res;
+    const authToken = payload?.token || res?.token;
+    const authUser = payload?.user || res?.user;
+
+    if (authToken && authUser) {
+      localStorage.setItem('fixflow_token', authToken);
+      setToken(authToken);
+      setUser(authUser);
+      return authUser;
     }
     throw new Error('GitHub authentication response was missing token or user data.');
   }, []);

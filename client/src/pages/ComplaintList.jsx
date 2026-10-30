@@ -37,9 +37,9 @@ export function ComplaintList() {
         priority: filters.priority,
       });
 
-      setComplaints(response?.complaints || []);
-      if (response?.pagination) {
-        setPagination(response.pagination);
+      setComplaints(response?.complaints || response?.data?.complaints || []);
+      if (response?.pagination || response?.meta) {
+        setPagination(response.pagination || response.meta);
       }
     } catch (err) {
       setError(err.message || 'Failed to retrieve complaints.');

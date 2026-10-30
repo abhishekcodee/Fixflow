@@ -309,12 +309,15 @@ export const verifyOtp = async (req, res, next) => {
 
       await EmailVerification.deleteOne({ _id: pendingRecord._id });
       const token = signToken(user);
+      const safeUser = user.toSafeObject();
 
       return res.status(201).json({
         success: true,
         message: 'Email verified successfully. Your account is now active.',
+        token,
+        user: safeUser,
         data: {
-          user: user.toSafeObject(),
+          user: safeUser,
           token
         }
       });
@@ -453,11 +456,13 @@ export const completeRegistration = async (req, res, next) => {
 
     logger.info(`User registration completed successfully: ${user.email} (Role: ${user.role})`);
 
+    const safeUser = user.toSafeObject ? user.toSafeObject() : user;
     return res.status(201).json({
       success: true,
       message: 'Account created successfully! You can now log in.',
+      user: safeUser,
       data: {
-        user: user.toSafeObject ? user.toSafeObject() : user
+        user: safeUser
       }
     });
   } catch (err) {
@@ -523,11 +528,14 @@ export const register = async (req, res, next) => {
       }
 
       const token = signToken(newUser);
+      const safeNewUser = newUser.toSafeObject();
       return res.status(201).json({
         success: true,
         message: 'User registered successfully',
+        token,
+        user: safeNewUser,
         data: {
-          user: newUser.toSafeObject(),
+          user: safeNewUser,
           token
         }
       });
@@ -594,12 +602,15 @@ export const login = async (req, res, next) => {
 
     // Issue JWT
     const token = signToken(user);
+    const safeUser = user.toSafeObject();
 
     return res.status(200).json({
       success: true,
       message: 'Login successful',
+      token,
+      user: safeUser,
       data: {
-        user: user.toSafeObject(),
+        user: safeUser,
         token
       }
     });
@@ -792,6 +803,7 @@ export const resetPassword = async (req, res, next) => {
 export const getMe = (req, res) => {
   return res.status(200).json({
     success: true,
+    user: req.user,
     data: {
       user: req.user
     }

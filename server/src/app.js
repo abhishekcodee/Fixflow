@@ -78,7 +78,9 @@ app.get('/', (req, res, next) => {
   });
 });
 
-// 5. Mount API Routes
+// 5. Mount API Routes & Health Endpoints
+app.use('/health', healthRoutes);
+app.use('/ready', healthRoutes);
 app.use('/api/v1/health', healthRoutes);
 app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/complaints', complaintRoutes);

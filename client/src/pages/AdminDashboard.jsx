@@ -71,12 +71,12 @@ export function AdminDashboard() {
         adminApi.getIdentityVerifications({ limit: 50 }).catch(() => ({ data: { verifications: [] } })),
       ]);
 
-      setUnassignedComplaints(complaintsRes?.complaints || []);
-      setAllComplaints(allRes?.complaints || complaintsRes?.complaints || []);
-      setTechnicians(techRes?.technicians || []);
-      setAdminTechs(adminTechRes?.technicians || []);
-      setCategoryMappings(catRes?.mappings || []);
-      setIdentityVerifications(identityRes?.data?.verifications || []);
+      setUnassignedComplaints(complaintsRes?.complaints || complaintsRes?.data?.complaints || []);
+      setAllComplaints(allRes?.complaints || allRes?.data?.complaints || complaintsRes?.complaints || complaintsRes?.data?.complaints || []);
+      setTechnicians(techRes?.technicians || techRes?.data?.technicians || []);
+      setAdminTechs(adminTechRes?.technicians || adminTechRes?.data?.technicians || []);
+      setCategoryMappings(catRes?.mappings || catRes?.data?.mappings || []);
+      setIdentityVerifications(identityRes?.data?.verifications || identityRes?.verifications || []);
     } catch (err) {
       if (!isBackground) {
         setError(err.message || 'Unable to retrieve administrative triage data.');

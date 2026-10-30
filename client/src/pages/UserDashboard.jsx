@@ -48,7 +48,7 @@ export function UserDashboard() {
         queryParams.nearby = 'true';
       }
       const response = await complaintsApi.list(queryParams);
-      const items = response?.complaints || [];
+      const items = response?.complaints || response?.data?.complaints || [];
       setComplaints(items);
       setTotalReported(response?.pagination?.total || items.length);
     } catch (err) {

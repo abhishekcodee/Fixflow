@@ -14,7 +14,7 @@ services:
     plan: free
     region: oregon
     buildCommand: npm install && npm --prefix server run prisma:generate
-    startCommand: npx prisma db push --schema=server/prisma/schema.prisma --accept-data-loss && node server/src/server.js
+    startCommand: node server/src/server.js
     healthCheckPath: /api/v1/health
     envVars:
       - key: NODE_ENV
@@ -22,7 +22,7 @@ services:
       - key: PORT
         value: 5000
       - key: CLIENT_URL
-        value: https://fixflow-eosin.vercel.app,https://fixflowwww.onrender.com
+        value: https://fixflow-bdhv.vercel.app,https://fixflow-eosin.vercel.app,https://fixflowwww.onrender.com
       # MySQL Database connection string (Prisma)
       # e.g.: mysql://user:password@host:port/database?sslaccept=strict
       - key: DATABASE_URL

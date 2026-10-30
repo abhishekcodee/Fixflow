@@ -47,7 +47,7 @@ export function TechnicianDashboard() {
     }
     try {
       const response = await complaintsApi.list({ limit: 50 });
-      setWorkOrders(response?.complaints || []);
+      setWorkOrders(response?.complaints || response?.data?.complaints || []);
     } catch (err) {
       if (!isBackground) {
         setError(err.message || 'Unable to retrieve assigned work orders.');
