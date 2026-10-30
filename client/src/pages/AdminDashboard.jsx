@@ -21,13 +21,15 @@ export function AdminDashboard() {
   const { user } = useAuth();
   const isAdmin = user?.role === 'admin';
 
-  const [activeSection, setActiveSection] = useState('dispatch'); // 'dispatch' | 'technicians' | 'categories'
+  const [activeSection, setActiveSection] = useState('dispatch'); // 'dispatch' | 'technicians' | 'categories' | 'identity'
 
   const [unassignedComplaints, setUnassignedComplaints] = useState([]);
   const [allComplaints, setAllComplaints] = useState([]);
   const [technicians, setTechnicians] = useState([]);
   const [adminTechs, setAdminTechs] = useState([]);
   const [categoryMappings, setCategoryMappings] = useState([]);
+  const [identityVerifications, setIdentityVerifications] = useState([]);
+  const [identityFilter, setIdentityFilter] = useState('ALL');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -45,18 +47,28 @@ export function AdminDashboard() {
   // Tech Approval action state
   const [processingTechId, setProcessingTechId] = useState(null);
 
+  // Identity review modal state
+  const [reviewingVerification, setReviewingVerification] = useState(null);
+  const [frontDocUrl, setFrontDocUrl] = useState(null);
+  const [backDocUrl, setBackDocUrl] = useState(null);
+  const [loadingDocs, setLoadingDocs] = useState(false);
+  const [reviewReason, setReviewReason] = useState('');
+  const [submittingReview, setSubmittingReview] = useState(false);
+  const [reviewError, setReviewError] = useState('');
+
   async function loadTriageData(isBackground = false) {
     if (!isBackground) {
       setLoading(true);
       setError(null);
     }
     try {
-      const [complaintsRes, allRes, techRes, adminTechRes, catRes] = await Promise.all([
+      const [complaintsRes, allRes, techRes, adminTechRes, catRes, identityRes] = await Promise.all([
         complaintsApi.list({ status: 'submitted', limit: 50 }),
         complaintsApi.list({ limit: 100 }).catch(() => null),
         authApi.getTechnicians().catch(() => ({ technicians: [] })),
         adminApi.getTechnicians().catch(() => ({ technicians: [] })),
         adminApi.getCategoryMappings().catch(() => ({ mappings: [] })),
+        adminApi.getIdentityVerifications({ limit: 50 }).catch(() => ({ data: { verifications: [] } })),
       ]);
 
       setUnassignedComplaints(complaintsRes?.complaints || []);
@@ -64,6 +76,7 @@ export function AdminDashboard() {
       setTechnicians(techRes?.technicians || []);
       setAdminTechs(adminTechRes?.technicians || []);
       setCategoryMappings(catRes?.mappings || []);
+      setIdentityVerifications(identityRes?.data?.verifications || []);
     } catch (err) {
       if (!isBackground) {
         setError(err.message || 'Unable to retrieve administrative triage data.');
@@ -167,6 +180,55 @@ export function AdminDashboard() {
     }
   }
 
+  // Open Document Review Modal
+  async function openReviewModal(item) {
+    setReviewingVerification(item);
+    setFrontDocUrl(null);
+    setBackDocUrl(null);
+    setReviewReason('');
+    setReviewError('');
+    setLoadingDocs(true);
+
+    try {
+      if (item.frontDocumentKey) {
+        const frontBlob = await adminApi.getAdminDocumentBlob(item.id, 'front');
+        setFrontDocUrl(URL.createObjectURL(frontBlob));
+      }
+      if (item.backDocumentKey) {
+        const backBlob = await adminApi.getAdminDocumentBlob(item.id, 'back');
+        setBackDocUrl(URL.createObjectURL(backBlob));
+      }
+    } catch (err) {
+      setReviewError('Failed to load decrypted document images from storage vault.');
+    } finally {
+      setLoadingDocs(false);
+    }
+  }
+
+  async function handleReviewDecision(decision) {
+    if (!reviewingVerification) return;
+    setReviewError('');
+
+    if (decision === 'reject' && !reviewReason.trim()) {
+      setReviewError('Please specify a rejection reason before rejecting documents.');
+      return;
+    }
+
+    setSubmittingReview(true);
+    try {
+      await adminApi.reviewIdentityVerification(reviewingVerification.id, {
+        decision,
+        rejectionReason: decision === 'reject' ? reviewReason.trim() : undefined
+      });
+      setReviewingVerification(null);
+      await loadTriageData(true);
+    } catch (err) {
+      setReviewError(err.message || 'Failed to update verification status.');
+    } finally {
+      setSubmittingReview(false);
+    }
+  }
+
   if (!isAdmin) {
     return (
       <div className="admin-page">
@@ -190,6 +252,11 @@ export function AdminDashboard() {
       </div>
     );
   }
+
+  const filteredVerifications = identityVerifications.filter((v) => {
+    if (identityFilter === 'ALL') return true;
+    return v.verificationStatus === identityFilter;
+  });
 
   return (
     <div className="admin-page">
@@ -219,6 +286,13 @@ export function AdminDashboard() {
           onClick={() => setActiveSection('technicians')}
         >
           👷 Technicians Directory ({adminTechs.length})
+        </button>
+        <button
+          type="button"
+          className={`admin-nav-tab ${activeSection === 'identity' ? 'active' : ''}`}
+          onClick={() => setActiveSection('identity')}
+        >
+          🛡️ Identity Verifications ({identityVerifications.length})
         </button>
         <button
           type="button"
@@ -423,6 +497,93 @@ export function AdminDashboard() {
         </Card>
       )}
 
+      {/* Identity Verifications Tab (Module 5) */}
+      {activeSection === 'identity' && (
+        <Card
+          title="Aadhaar Identity Verifications & Document Review"
+          subtitle="Audit submitted government identities, review encrypted card documents, and govern credential approvals"
+          className="admin-triage-card"
+        >
+          <div className="identity-filters-bar">
+            <span>Filter Status:</span>
+            {['ALL', 'PENDING_REVIEW', 'OTP_VERIFIED', 'DOCUMENTS_UPLOADED', 'VERIFIED', 'REJECTED'].map((st) => (
+              <button
+                key={st}
+                type="button"
+                className={`identity-filter-btn ${identityFilter === st ? 'active' : ''}`}
+                onClick={() => setIdentityFilter(st)}
+              >
+                {st.replace('_', ' ')}
+              </button>
+            ))}
+          </div>
+
+          <div className="table-responsive">
+            <table className="data-table">
+              <thead>
+                <tr>
+                  <th>User / Technician</th>
+                  <th>Role</th>
+                  <th>Masked Aadhaar</th>
+                  <th>Verification Status</th>
+                  <th>Documents</th>
+                  <th>Submitted At</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredVerifications.length === 0 ? (
+                  <tr>
+                    <td colSpan={7} className="text-center text-muted py-6">
+                      No verification requests matching "{identityFilter}".
+                    </td>
+                  </tr>
+                ) : (
+                  filteredVerifications.map((item) => (
+                    <tr key={item.id}>
+                      <td>
+                        <div className="font-medium">{item.user?.name || 'Unknown'}</div>
+                        <div className="text-xs text-muted font-mono">{item.user?.email}</div>
+                      </td>
+                      <td>
+                        <StatusBadge status={item.user?.role || 'user'} size="sm" />
+                      </td>
+                      <td>
+                        <span className="font-mono font-semibold text-primary">{item.aadhaarNumberMasked}</span>
+                      </td>
+                      <td>
+                        <StatusBadge status={item.verificationStatus.toLowerCase()} size="sm" />
+                      </td>
+                      <td>
+                        {item.frontDocumentKey && item.backDocumentKey ? (
+                          <span className="text-xs text-success font-medium">📷 Both Uploaded</span>
+                        ) : item.frontDocumentKey ? (
+                          <span className="text-xs text-warning">Front Only</span>
+                        ) : (
+                          <span className="text-xs text-muted">No Images</span>
+                        )}
+                      </td>
+                      <td className="text-xs text-muted">
+                        {item.createdAt ? new Date(item.createdAt).toLocaleDateString() : '—'}
+                      </td>
+                      <td>
+                        <Button
+                          variant="primary"
+                          size="sm"
+                          onClick={() => openReviewModal(item)}
+                        >
+                          Review Documents
+                        </Button>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </Card>
+      )}
+
       {activeSection === 'categories' && (
         <Card
           title="Intelligent Category-to-Specialization Rules"
@@ -462,6 +623,91 @@ export function AdminDashboard() {
             </table>
           </div>
         </Card>
+      )}
+
+      {/* Identity Document Review Modal (Module 5) */}
+      {reviewingVerification && (
+        <div className="doc-modal-overlay" onClick={() => setReviewingVerification(null)}>
+          <div className="admin-review-modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="doc-modal-header">
+              <div>
+                <h4 style={{ margin: 0 }}>Review Aadhaar Documents: {reviewingVerification.user?.name}</h4>
+                <span className="text-xs text-muted">
+                  ID: {reviewingVerification.aadhaarNumberMasked} | Role: {reviewingVerification.user?.role}
+                </span>
+              </div>
+              <button type="button" className="doc-modal-close" onClick={() => setReviewingVerification(null)}>✕</button>
+            </div>
+
+            <div className="admin-review-modal-body">
+              {reviewError && (
+                <div style={{ marginBottom: '12px' }}>
+                  <ErrorState title="Review Notice" message={reviewError} />
+                </div>
+              )}
+
+              {loadingDocs ? (
+                <p className="text-center py-6 text-muted">Decrypting uploaded document images from vault...</p>
+              ) : (
+                <div className="admin-docs-side-by-side">
+                  <div className="admin-doc-frame">
+                    <span className="font-semibold text-xs text-muted mb-1 block">Front Side:</span>
+                    {frontDocUrl ? (
+                      <img src={frontDocUrl} alt="Aadhaar Front" className="admin-doc-preview-img" />
+                    ) : (
+                      <div className="no-doc-placeholder">Front image not uploaded</div>
+                    )}
+                  </div>
+                  <div className="admin-doc-frame">
+                    <span className="font-semibold text-xs text-muted mb-1 block">Back Side:</span>
+                    {backDocUrl ? (
+                      <img src={backDocUrl} alt="Aadhaar Back" className="admin-doc-preview-img" />
+                    ) : (
+                      <div className="no-doc-placeholder">Back image not uploaded</div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              <div style={{ marginTop: '16px' }}>
+                <Textarea
+                  id="admin-review-reason"
+                  label="Rejection Reason (Required only if rejecting):"
+                  placeholder="e.g. Back image is blurry, name on card does not match account, etc."
+                  value={reviewReason}
+                  onChange={(e) => setReviewReason(e.target.value)}
+                  rows={2}
+                />
+              </div>
+
+              <div className="admin-review-actions-bar">
+                <Button
+                  variant="secondary"
+                  size="md"
+                  onClick={() => setReviewingVerification(null)}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  variant="danger"
+                  size="md"
+                  isLoading={submittingReview}
+                  onClick={() => handleReviewDecision('reject')}
+                >
+                  Reject Verification
+                </Button>
+                <Button
+                  variant="success"
+                  size="md"
+                  isLoading={submittingReview}
+                  onClick={() => handleReviewDecision('approve')}
+                >
+                  Approve Verification
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Technician Assignment Modal */}

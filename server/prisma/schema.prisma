@@ -35,6 +35,7 @@ model User {
   assignedComplaints  Complaint[]        @relation("ComplaintTechnician")
   historyActions      ComplaintHistory[] @relation("HistoryActor")
   technicianProfile   TechnicianProfile?
+  aadhaarVerification AadhaarVerification?
 
   @@index([role])
   @@index([identityStatus])
@@ -175,4 +176,46 @@ model CategoryMapping {
   description              String?  @db.VarChar(255)
   createdAt                DateTime @default(now())
   updatedAt                DateTime @updatedAt
+}
+
+
+model AadhaarVerification {
+  id                        String    @id @default(uuid())
+  userId                    String    @unique
+  user                      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  verificationStatus        String    @default("NOT_STARTED") @db.VarChar(30)
+  aadhaarNumberMasked       String    @db.VarChar(30)
+  identityHash              String    @db.VarChar(255)
+  providerReference         String?   @db.VarChar(120)
+  providerResponse          Json?
+  
+  frontDocumentKey          String?   @db.VarChar(255)
+  backDocumentKey           String?   @db.VarChar(255)
+  frontDocumentOriginalName String?   @db.VarChar(255)
+  backDocumentOriginalName  String?   @db.VarChar(255)
+  frontDocumentMimeType     String?   @db.VarChar(50)
+  backDocumentMimeType      String?   @db.VarChar(50)
+  frontDocumentSize         Int?
+  backDocumentSize          Int?
+
+  consentAcceptedAt         DateTime?
+  otpSentAt                 DateTime?
+  otpVerifiedAt             DateTime?
+  documentsUploadedAt       DateTime?
+  verifiedAt                DateTime?
+  rejectedAt                DateTime?
+  rejectionReason           String?   @db.Text
+  reviewedById              String?   @db.VarChar(36)
+
+  resendAttempts            Int       @default(0)
+  lastResendAt              DateTime?
+  otpAttempts               Int       @default(0)
+  otpExpiresAt              DateTime?
+
+  createdAt                 DateTime  @default(now())
+  updatedAt                 DateTime  @updatedAt
+
+  @@index([verificationStatus])
+  @@index([identityHash])
 }

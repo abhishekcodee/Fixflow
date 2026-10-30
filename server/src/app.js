@@ -9,6 +9,7 @@ import authRoutes from './routes/authRoutes.js';
 import complaintRoutes from './routes/complaintRoutes.js';
 import technicianRoutes from './routes/technicianRoutes.js';
 import adminRoutes from './routes/adminRoutes.js';
+import identityRoutes from './routes/identityRoutes.js';
 import notFound from './middleware/notFound.js';
 import errorHandler from './middleware/errorHandler.js';
 
@@ -36,13 +37,13 @@ app.use(
       const isAllowed =
         env.NODE_ENV === 'development' ||
         allowedOrigins.includes(normalizedOrigin) ||
-        /^https:\/\/([a-zA-Z0-9-_]+)\.vercel\.app$/.test(normalizedOrigin) ||
-        /^https:\/\/([a-zA-Z0-9-_]+)\.onrender\.com$/.test(normalizedOrigin);
+        /^https:\/\/[a-zA-Z0-9-]+\.vercel\.app$/.test(origin) ||
+        /^https:\/\/[a-zA-Z0-9-]+\.onrender\.com$/.test(origin);
 
       if (isAllowed) {
         callback(null, true);
       } else {
-        callback(new Error(`CORS blocked for origin: ${origin}`));
+        callback(new Error(`Origin ${origin} not allowed by CORS policy`));
       }
     },
     credentials: true,
@@ -71,7 +72,8 @@ app.get('/', (req, res, next) => {
     endpoints: {
       health: '/api/v1/health',
       auth: '/api/v1/auth',
-      complaints: '/api/v1/complaints'
+      complaints: '/api/v1/complaints',
+      identity: '/api/v1/identity'
     }
   });
 });
@@ -82,6 +84,7 @@ app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/complaints', complaintRoutes);
 app.use('/api/v1/technicians', technicianRoutes);
 app.use('/api/v1/admin', adminRoutes);
+app.use('/api/v1/identity', identityRoutes);
 
 // 6. Serve static client bundle in production if built dist directory exists
 const clientDistPath = path.resolve('dist');
@@ -98,7 +101,7 @@ if (fs.existsSync(clientDistPath) && fs.existsSync(path.join(clientDistPath, 'in
 // 7. 404 Route Not Found Middleware (Must be registered after all active routes)
 app.use(notFound);
 
-// 8. Centralized Error-Handling Middleware (Must be the final middleware)
+// 8. Global Error Handling Middleware (Centralized)
 app.use(errorHandler);
 
 export default app;

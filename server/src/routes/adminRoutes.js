@@ -5,6 +5,11 @@ import {
   getCategoryMappings,
   updateCategoryMapping
 } from '../controllers/authController.js';
+import {
+  getAdminVerifications,
+  getAdminDocument,
+  reviewVerification
+} from '../controllers/identityController.js';
 import { authenticate, authorize } from '../middleware/auth.js';
 
 const router = express.Router();
@@ -20,5 +25,10 @@ router.use(authorize('admin'));
 router.get('/technicians', getAdminTechnicians);
 router.patch('/technicians/:id/approval', updateTechnicianApproval);
 router.put('/category-mappings/:category', updateCategoryMapping);
+
+// Admin Identity Verification Governance
+router.get('/identity-verifications', getAdminVerifications);
+router.get('/identity-verifications/:id/documents/:side', getAdminDocument);
+router.patch('/identity-verifications/:id/review', reviewVerification);
 
 export default router;
